@@ -41,9 +41,9 @@ Lista priorizada de melhorias para o app Flutter, com base no protocolo, na sinc
 ## 5. Qualidade / produto
 
 - [x] Splash + empty states melhores
-- [x] Testes de agrupamento do histórico / progressão / desfazer série
-- iOS (`GoogleService-Info.plist`) se for lançar também no iPhone
-- Migrar Kotlin “built-in” (Flutter já avisou no build Android)
+- [x] Testes de agrupamento / progressão / desfazer / sync legado
+- [x] iOS preparado (`GoogleService-Info.plist` template + `doc/ios-firebase.md`) — falta registrar app no Console
+- [x] Kotlin: DSL `compilerOptions` + `doc/android-kotlin.md` (built-in bloqueado por plugins Firebase)
 
 ---
 
@@ -54,34 +54,23 @@ Lista priorizada de melhorias para o app Flutter, com base no protocolo, na sinc
 3. ~~Histórico unificado e progresso por exercício~~ ✅
 4. ~~Desfazer/editar série + timer com notificação + merge seguro + splash~~ ✅
 5. ~~Biblioteca de exercícios + guia + vídeos (arquitetura)~~ ✅
+6. ~~iOS template + fixtures de sync + Kotlin built-in~~ ✅
 
 ### Pacotes implementados
 
-**Pacote 1+2**
-1. Sync automático ao abrir (se logado; re-sync a cada 15 min se stale)
-2. Pré-preenchimento de carga/reps/RIR
-3. Status de sync na Home/Perfil
+**Pacote 1+2** — sync automático, pré-preenchimento, status  
+**Pacote 3** — histórico agrupado + progresso  
+**Pacote 4** — desfazer/editar, timer notificação, merge seguro, splash  
+**Pacote 5** — biblioteca de exercícios + guia + vídeo (URL opcional)  
 
-**Pacote 3**
-1. Histórico agrupado por dia + plano (`N registros unidos`)
-2. Progresso com filtro 7/30/90/tudo, volume semanal, melhores marcas
-3. Sugestões de progressão do protocolo (orientação, sem alterar séries)
-
-**Pacote 4**
-1. Desfazer / editar série na execução do treino
-2. Timer de descanso com notificação local (Android/iOS; web sem notificação)
-3. Merge local↔nuvem mais seguro (treino ativo preservado; upsert só se progresso maior/mais recente)
-4. Splash Flutter + empty states + `doc/android-sha1.md`
-
-**Pacote 5**
-1. Detalhe do exercício com protocolo, gráfico, melhor marca, tip e histórico por dia
-2. Lista com última performance + resumo de séries
-3. Vídeo via `url_launcher` quando houver URL em `lib/data/seed/exercise_media.dart` (mapa vazio — sem inventar)
-4. Guia expandido (divisão semanal, tipos de série, como registrar)
+**Pacote 6**
+1. `LegacyWorkoutMapper` + testes com `test/fixtures/legacy_workout_history.json`
+2. iOS: plist template, URL scheme Google Sign-In, `doc/ios-firebase.md`
+3. Android: DSL `kotlin.compilerOptions` + doc de migração built-in (`doc/android-kotlin.md`)
 
 ### Próximo pacote sugerido
 
-1. iOS (`GoogleService-Info.plist`) + testes de sync com fixtures legadas
-2. Migrar warning Kotlin built-in no Android
+1. Registrar app iOS no Firebase e trocar `GOOGLE_APP_ID` real
+2. Ativar `android.builtInKotlin=true` quando plugins Firebase migrarem
 3. Cadastrar URLs reais de vídeo quando disponíveis no PDF/projeto
-4. (Opcional) player embutido em vez de abrir externo
+4. (Opcional) player embutido de vídeo / `android.newDsl=true`

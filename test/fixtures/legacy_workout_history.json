@@ -1,0 +1,133 @@
+{
+  "sessions": [
+    {
+      "exercises": [
+        {
+          "exerciseName": "Tríceps Barra V de Costas",
+          "exerciseId": "seg-1",
+          "completedAt": 1782480000475,
+          "sets": [
+            {
+              "timestamp": 1782480000475,
+              "setIndex": 0,
+              "reps": 10,
+              "weight": 10
+            },
+            {
+              "weight": 10,
+              "reps": 10,
+              "setIndex": 1,
+              "timestamp": 1782480000475
+            },
+            {
+              "timestamp": 1782480000475,
+              "setIndex": 2,
+              "weight": 40,
+              "reps": 7
+            },
+            {
+              "timestamp": 1782480000475,
+              "reps": 7,
+              "weight": 40,
+              "setIndex": 3
+            },
+            {
+              "reps": 8,
+              "weight": 60,
+              "setIndex": 4,
+              "timestamp": 1782480000475
+            },
+            {
+              "weight": 60,
+              "setIndex": 5,
+              "reps": 7,
+              "timestamp": 1782480000475
+            }
+          ]
+        }
+      ],
+      "totalDuration": 0,
+      "dayName": "Segunda-feira",
+      "id": "session-1782480000475",
+      "startedAt": 1782480000475,
+      "dayId": "segunda",
+      "completedAt": 1782480000475
+    },
+    {
+      "completedAt": 1782557939888,
+      "startedAt": 1782557939888,
+      "dayId": "sabado",
+      "totalDuration": 0,
+      "exercises": [
+        {
+          "sets": [
+            {
+              "weight": 15,
+              "setIndex": 0,
+              "timestamp": 1782557939888,
+              "reps": 7
+            },
+            {
+              "setIndex": 1,
+              "reps": 6,
+              "timestamp": 1782557939888,
+              "weight": 15
+            },
+            {
+              "reps": 8,
+              "setIndex": 2,
+              "weight": 25,
+              "timestamp": 1782557939888
+            },
+            {
+              "setIndex": 3,
+              "timestamp": 1782557939888,
+              "reps": 3,
+              "weight": 30
+            }
+          ],
+          "completedAt": 1782557939888,
+          "exerciseId": "sab-1",
+          "exerciseName": "Scott Máquina"
+        }
+      ],
+      "id": "session-1782557939888",
+      "dayName": "Sábado"
+    },
+    {
+      "startedAt": 1782559372138,
+      "dayId": "sabado",
+      "dayName": "Sábado",
+      "totalDuration": 0,
+      "id": "session-1782559372138",
+      "completedAt": 1782559372138,
+      "exercises": [
+        {
+          "completedAt": 1782559372138,
+          "sets": [
+            {
+              "timestamp": 1782559372138,
+              "setIndex": 0,
+              "reps": 12,
+              "weight": 7
+            },
+            {
+              "timestamp": 1782559372138,
+              "reps": 20,
+              "setIndex": 1,
+              "weight": 10
+            },
+            {
+              "reps": 16,
+              "setIndex": 2,
+              "weight": 12,
+              "timestamp": 1782559372138
+            }
+          ],
+          "exerciseId": "sab-2",
+          "exerciseName": "Rosca Banco Inclinado Alternada"
+        }
+      ]
+    }
+  ]
+}

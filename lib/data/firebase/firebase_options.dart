@@ -45,13 +45,15 @@ class DefaultFirebaseOptions {
     storageBucket: 'massive-4f2f4.firebasestorage.app',
   );
 
-  /// Placeholder iOS — adicione GoogleService-Info.plist e atualize appId.
+  /// iOS — bundle `com.massive.massiveArms`.
+  /// Substitua `appId` pelo GOOGLE_APP_ID do GoogleService-Info.plist oficial
+  /// (ver doc/ios-firebase.md). Até lá o init pode falhar e o app segue offline.
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyC3Tcczc7b0WiPapJEHyAlC7tnC0UEUtdY',
-    appId: '1:883844314360:android:914a1f19cb4517cfadf70d',
+    appId: '1:883844314360:ios:REPLACE_AFTER_FIREBASE_CONSOLE',
     messagingSenderId: '883844314360',
     projectId: 'massive-4f2f4',
     storageBucket: 'massive-4f2f4.firebasestorage.app',
-    iosBundleId: 'space.manus.massive.arms',
+    iosBundleId: 'com.massive.massiveArms',
   );
 }
