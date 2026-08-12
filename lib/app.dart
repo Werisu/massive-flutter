@@ -62,36 +62,14 @@ class _AppSplash extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 84,
-              height: 84,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-                border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.5),
-                ),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+              child: Image.asset(
+                'assets/branding/app_icon.png',
+                width: 128,
+                height: 128,
+                fit: BoxFit.cover,
               ),
-              child: const Icon(
-                Icons.fitness_center,
-                size: 40,
-                color: AppColors.primaryLight,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            Text(
-              'MASSIVE ARMS',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    letterSpacing: 1.4,
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'and Shoulders',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.primaryLight,
-                  ),
             ),
             const SizedBox(height: AppSpacing.xxl),
             const SizedBox(
