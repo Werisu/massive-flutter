@@ -137,9 +137,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             if (last == null)
               AppCard(
                 child: EmptyState(
-                  title: 'Ainda não há treinos registrados.',
+                  title: 'Pronto para o primeiro treino',
                   subtitle:
-                      'Comece seu primeiro treino ou sincronize o Firebase em Perfil.',
+                      'Comece agora ou entre com Google no Perfil para trazer o histórico da nuvem.',
+                  icon: Icons.rocket_launch_outlined,
                   actionLabel:
                       today.isDayOff ? null : 'Começar primeiro treino',
                   onAction: today.isDayOff

@@ -7,8 +7,8 @@ Lista priorizada de melhorias para o app Flutter, com base no protocolo, na sinc
 ## 1. Experiência do treino (prioridade alta)
 
 - [x] Pré-preencher carga/reps da **última série valendo** do mesmo exercício
-- Timer de descanso em **notificação** (continua se sair da tela)
-- “Desfazer série” e editar série já concluída
+- [x] Timer de descanso em **notificação** (continua se sair da tela)
+- [x] “Desfazer série” e editar série já concluída
 - [x] Agrupar o histórico por **dia de treino completo**, não só por sessão fragmentada do app antigo
 
 ---
@@ -17,8 +17,8 @@ Lista priorizada de melhorias para o app Flutter, com base no protocolo, na sinc
 
 - [x] Tela clara de status: logado, último sync, quantos treinos importados
 - [x] Sync automático ao abrir o app (quando já estiver logado)
-- Resolver conflito local vs nuvem (hoje o merge é simples)
-- Login Google estável no Android (SHA-1 do keystore de release)
+- [x] Resolver conflito local vs nuvem (merge por progresso / data; não sobrescreve treino ativo)
+- [x] Doc SHA-1 release Android (`doc/android-sha1.md`) — cadastrar fingerprints no Firebase
 
 ---
 
@@ -40,8 +40,8 @@ Lista priorizada de melhorias para o app Flutter, com base no protocolo, na sinc
 
 ## 5. Qualidade / produto
 
-- Splash + empty states melhores
-- Testes de sync e de mapeamento do histórico legado
+- [x] Splash + empty states melhores
+- [x] Testes de agrupamento do histórico / progressão / desfazer série
 - iOS (`GoogleService-Info.plist`) se for lançar também no iPhone
 - Migrar Kotlin “built-in” (Flutter já avisou no build Android)
 
@@ -52,6 +52,7 @@ Lista priorizada de melhorias para o app Flutter, com base no protocolo, na sinc
 1. ~~Sync automático + feedback claro do histórico importado~~ ✅
 2. ~~Pré-preenchimento de carga/reps no treino~~ ✅
 3. ~~Histórico unificado e progresso por exercício~~ ✅
+4. ~~Desfazer/editar série + timer com notificação + merge seguro + splash~~ ✅
 
 ### Pacotes implementados
 
@@ -65,8 +66,15 @@ Lista priorizada de melhorias para o app Flutter, com base no protocolo, na sinc
 2. Progresso com filtro 7/30/90/tudo, volume semanal, melhores marcas
 3. Sugestões de progressão do protocolo (orientação, sem alterar séries)
 
+**Pacote 4**
+1. Desfazer / editar série na execução do treino
+2. Timer de descanso com notificação local (Android/iOS; web sem notificação)
+3. Merge local↔nuvem mais seguro (treino ativo preservado; upsert só se progresso maior/mais recente)
+4. Splash Flutter + empty states + `doc/android-sha1.md`
+
 ### Próximo pacote sugerido
 
-1. Desfazer/editar série + timer de descanso em notificação
-2. Conflito local vs nuvem + SHA-1 release Android
-3. Splash/empty states, testes extras, iOS
+1. Biblioteca de exercícios com histórico no detalhe + vídeos (URLs reais)
+2. Guia do protocolo mais completo
+3. iOS (`GoogleService-Info.plist`) + testes de sync com fixtures legadas
+4. Migrar warning Kotlin built-in no Android

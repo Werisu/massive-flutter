@@ -207,6 +207,59 @@ class SessionRepository {
     return updated;
   }
 
+  /// Marca série como não concluída (desfazer), preservando carga/reps digitadas.
+  Future<WorkoutSession> uncompleteSet({
+    required WorkoutSession session,
+    required String exerciseId,
+    required int setIndex,
+  }) async {
+    final exercises = session.exercises.map((ex) {
+      if (ex.exerciseId != exerciseId) return ex;
+      final sets = [...ex.sets];
+      final current = sets[setIndex];
+      sets[setIndex] = current.copyWith(
+        completed: false,
+        clearCompletedAt: true,
+      );
+      return ex.copyWith(sets: sets);
+    }).toList();
+
+    final updated = session.copyWith(exercises: exercises);
+    await _save(updated);
+    return updated;
+  }
+
+  /// Atualiza valores de uma série já concluída.
+  Future<WorkoutSession> editSet({
+    required WorkoutSession session,
+    required String exerciseId,
+    required int setIndex,
+    required double? weight,
+    required int? repetitions,
+    required int? rir,
+  }) async {
+    final exercises = session.exercises.map((ex) {
+      if (ex.exerciseId != exerciseId) return ex;
+      final sets = [...ex.sets];
+      final current = sets[setIndex];
+      sets[setIndex] = current.copyWith(
+        weight: weight,
+        repetitions: repetitions,
+        rir: rir,
+        completed: true,
+        completedAt: current.completedAt ?? DateTime.now(),
+        clearWeight: weight == null,
+        clearReps: repetitions == null,
+        clearRir: rir == null,
+      );
+      return ex.copyWith(sets: sets);
+    }).toList();
+
+    final updated = session.copyWith(exercises: exercises);
+    await _save(updated);
+    return updated;
+  }
+
   Future<WorkoutSession> finishSession(WorkoutSession session) async {
     final updated = session.copyWith(finishedAt: DateTime.now());
     await _save(updated);
@@ -214,17 +267,49 @@ class SessionRepository {
     return updated;
   }
 
-  /// Importa sessões remotas sem sobrescrever locais com mesmo id.
+  /// Importa sessões remotas com merge seguro (não apaga progresso local melhor).
   Future<int> mergeRemoteSessions(List<WorkoutSession> remote) async {
     var imported = 0;
+    final activeId = getActiveSession()?.id;
+
     for (final session in remote) {
-      final existing = _sessionsBox.get(session.id);
-      if (existing == null) {
+      final existingRaw = _sessionsBox.get(session.id);
+      if (existingRaw == null) {
+        await _save(session);
+        imported++;
+        continue;
+      }
+
+      final local = WorkoutSession.fromJson(
+        jsonDecode(existingRaw) as Map<String, dynamic>,
+      );
+
+      // Não sobrescreve treino ativo em andamento.
+      if (!local.isFinished && local.id == activeId) continue;
+
+      final shouldReplace = _remoteIsPreferable(local: local, remote: session);
+      if (shouldReplace) {
         await _save(session);
         imported++;
       }
     }
     return imported;
+  }
+
+  bool _remoteIsPreferable({
+    required WorkoutSession local,
+    required WorkoutSession remote,
+  }) {
+    if (remote.completedSets > local.completedSets) return true;
+    if (remote.completedSets < local.completedSets) return false;
+
+    final localDone = local.finishedAt;
+    final remoteDone = remote.finishedAt;
+    if (localDone == null && remoteDone != null) return true;
+    if (localDone != null && remoteDone != null) {
+      return remoteDone.isAfter(localDone);
+    }
+    return false;
   }
 
   Future<void> discardActiveSession() async {

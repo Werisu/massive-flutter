@@ -127,6 +127,40 @@ class SessionsNotifier extends StateNotifier<List<WorkoutSession>> {
     return updated;
   }
 
+  Future<WorkoutSession> uncompleteSet({
+    required WorkoutSession session,
+    required String exerciseId,
+    required int setIndex,
+  }) async {
+    final updated = await _repo.uncompleteSet(
+      session: session,
+      exerciseId: exerciseId,
+      setIndex: setIndex,
+    );
+    refresh();
+    return updated;
+  }
+
+  Future<WorkoutSession> editSet({
+    required WorkoutSession session,
+    required String exerciseId,
+    required int setIndex,
+    required double? weight,
+    required int? repetitions,
+    required int? rir,
+  }) async {
+    final updated = await _repo.editSet(
+      session: session,
+      exerciseId: exerciseId,
+      setIndex: setIndex,
+      weight: weight,
+      repetitions: repetitions,
+      rir: rir,
+    );
+    refresh();
+    return updated;
+  }
+
   Future<WorkoutSession> save(WorkoutSession session) async {
     await _repo.updateSession(session);
     refresh();

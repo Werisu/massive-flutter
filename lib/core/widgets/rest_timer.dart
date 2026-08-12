@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../services/rest_notification_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../utils/formatters.dart';
@@ -13,25 +14,29 @@ class RestTimer extends StatefulWidget {
     required this.initialDuration,
     this.onFinished,
     this.onSkip,
+    this.notifyOnComplete = true,
   });
 
   final Duration initialDuration;
   final VoidCallback? onFinished;
   final VoidCallback? onSkip;
+  final bool notifyOnComplete;
 
   @override
   State<RestTimer> createState() => _RestTimerState();
 }
 
-class _RestTimerState extends State<RestTimer> {
+class _RestTimerState extends State<RestTimer> with WidgetsBindingObserver {
   late Duration _remaining;
   late Duration _total;
   Timer? _timer;
   bool _running = false;
+  DateTime? _endsAt;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _total = widget.initialDuration;
     _remaining = widget.initialDuration;
     _start();
@@ -39,28 +44,68 @@ class _RestTimerState extends State<RestTimer> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
+    RestNotificationService.instance.cancelRest();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _endsAt != null && _running) {
+      final left = _endsAt!.difference(DateTime.now());
+      if (left <= Duration.zero) {
+        _finish();
+      } else {
+        setState(() => _remaining = left);
+      }
+    }
+  }
+
+  Future<void> _scheduleNotification() async {
+    if (!widget.notifyOnComplete || !_running) return;
+    if (_remaining.inSeconds <= 0) return;
+    await RestNotificationService.instance.scheduleRestFinished(
+      after: _remaining,
+    );
   }
 
   void _start() {
     _timer?.cancel();
     _running = true;
+    _endsAt = DateTime.now().add(_remaining);
+    _scheduleNotification();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!_running) return;
-      if (_remaining.inSeconds <= 1) {
-        setState(() => _remaining = Duration.zero);
-        _timer?.cancel();
-        _running = false;
-        widget.onFinished?.call();
-        return;
+      if (_endsAt != null) {
+        final left = _endsAt!.difference(DateTime.now());
+        if (left <= Duration.zero) {
+          _finish();
+          return;
+        }
+        setState(() => _remaining = left);
       }
-      setState(() => _remaining -= const Duration(seconds: 1));
     });
   }
 
+  void _finish() {
+    _timer?.cancel();
+    _running = false;
+    setState(() => _remaining = Duration.zero);
+    RestNotificationService.instance.cancelRest();
+    widget.onFinished?.call();
+  }
+
   void _toggle() {
-    setState(() => _running = !_running);
+    setState(() {
+      if (_running) {
+        _running = false;
+        _timer?.cancel();
+        RestNotificationService.instance.cancelRest();
+      } else {
+        _start();
+      }
+    });
   }
 
   void _restart() {
@@ -75,7 +120,16 @@ class _RestTimerState extends State<RestTimer> {
       final next = _remaining.inSeconds + seconds;
       _remaining = Duration(seconds: next.clamp(0, 60 * 30));
       if (_remaining > _total) _total = _remaining;
+      if (_running) {
+        _endsAt = DateTime.now().add(_remaining);
+        _scheduleNotification();
+      }
     });
+  }
+
+  Future<void> _skip() async {
+    await RestNotificationService.instance.cancelRest();
+    widget.onSkip?.call();
   }
 
   @override
@@ -93,6 +147,12 @@ class _RestTimerState extends State<RestTimer> {
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: AppColors.primaryLight,
                 ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Notificação ao terminar (mesmo fora do app)',
+            style: Theme.of(context).textTheme.bodySmall,
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: AppSpacing.md),
           SizedBox(
@@ -152,7 +212,7 @@ class _RestTimerState extends State<RestTimer> {
           const SizedBox(height: AppSpacing.md),
           SecondaryButton(
             label: 'Pular descanso',
-            onPressed: widget.onSkip,
+            onPressed: _skip,
             icon: Icons.skip_next,
           ),
         ],

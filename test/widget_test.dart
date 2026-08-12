@@ -146,4 +146,36 @@ void main() {
     expect(best.first.weight, 45);
     expect(best.first.reps, 8);
   });
+
+  test('desfazer série limpa completedAt e mantém carga/reps', () {
+    final at = DateTime(2026, 3, 24, 12);
+    const original = SetRecord(
+      id: 's1',
+      exerciseId: 'ex_scott_maquina',
+      setType: SetType.working,
+      setNumber: 1,
+      weight: 30,
+      repetitions: 9,
+      rir: 2,
+      completed: true,
+    );
+    final completed = original.copyWith(completedAt: at);
+    final undone = completed.copyWith(
+      completed: false,
+      clearCompletedAt: true,
+    );
+
+    expect(undone.completed, isFalse);
+    expect(undone.completedAt, isNull);
+    expect(undone.weight, 30);
+    expect(undone.repetitions, 9);
+    expect(undone.rir, 2);
+  });
+
+  test('chave de dia do histórico é estável', () {
+    final a = HistoryGrouping.dayKey(DateTime(2026, 3, 24, 9), 'plan_monday');
+    final b = HistoryGrouping.dayKey(DateTime(2026, 3, 24, 22), 'plan_monday');
+    expect(a, b);
+    expect(a, '2026-03-24_plan_monday');
+  });
 }

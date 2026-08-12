@@ -39,6 +39,7 @@ class SetRecord {
     bool clearWeight = false,
     bool clearReps = false,
     bool clearRir = false,
+    bool clearCompletedAt = false,
   }) {
     return SetRecord(
       id: id ?? this.id,
@@ -48,7 +49,7 @@ class SetRecord {
       weight: clearWeight ? null : (weight ?? this.weight),
       repetitions: clearReps ? null : (repetitions ?? this.repetitions),
       rir: clearRir ? null : (rir ?? this.rir),
-      completedAt: completedAt ?? this.completedAt,
+      completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
       notes: notes ?? this.notes,
       completed: completed ?? this.completed,
     );

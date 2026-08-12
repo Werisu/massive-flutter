@@ -280,7 +280,18 @@ class FirestoreSyncRepository {
 
       final idx = sessions.indexWhere((s) => s['id'] == legacy['id']);
       if (idx >= 0) {
-        sessions[idx] = legacy;
+        final existing = sessions[idx];
+        final existingCompleted = _legacyCompletedSets(existing);
+        final incomingCompleted = _legacyCompletedSets(legacy);
+        final existingAt = existing['completedAt'] as int? ?? 0;
+        final incomingAt = legacy['completedAt'] as int? ?? 0;
+
+        // Só sobrescreve se o local tiver mais progresso ou for mais recente.
+        if (incomingCompleted > existingCompleted ||
+            (incomingCompleted == existingCompleted &&
+                incomingAt >= existingAt)) {
+          sessions[idx] = legacy;
+        }
       } else {
         sessions.add(legacy);
       }
@@ -294,6 +305,18 @@ class FirestoreSyncRepository {
         SetOptions(merge: true),
       );
     });
+  }
+
+  int _legacyCompletedSets(Map<String, dynamic> legacy) {
+    final exercises = legacy['exercises'];
+    if (exercises is! List) return 0;
+    var count = 0;
+    for (final ex in exercises) {
+      if (ex is! Map) continue;
+      final sets = ex['sets'];
+      if (sets is List) count += sets.length;
+    }
+    return count;
   }
 
   Map<String, dynamic> _toLegacySession(WorkoutSession session) {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
+import 'core/services/rest_notification_service.dart';
 import 'data/firebase/auth_repository.dart';
 import 'data/firebase/firebase_options.dart';
 import 'data/local/hive_boxes.dart';
@@ -29,6 +30,12 @@ Future<void> main() async {
     }
   } catch (e, st) {
     debugPrint('Firebase init falhou (seguindo offline): $e\n$st');
+  }
+
+  try {
+    await RestNotificationService.instance.init();
+  } catch (e) {
+    debugPrint('Notificações init: $e');
   }
 
   runApp(

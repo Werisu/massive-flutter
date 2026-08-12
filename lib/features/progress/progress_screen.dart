@@ -54,8 +54,10 @@ class ProgressScreen extends ConsumerWidget {
       ),
       body: sessions.isEmpty
           ? EmptyState(
-              title: 'Ainda não há treinos registrados.',
-              subtitle: 'Complete um treino para ver sua evolução.',
+              title: 'Sem dados de progresso ainda',
+              subtitle:
+                  'Complete treinos para ver volume, melhores marcas e sugestões.',
+              icon: Icons.show_chart,
               actionLabel: 'Ir para treinos',
               onAction: () => context.go('/workouts'),
             )

@@ -25,8 +25,11 @@ class HistoryScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Histórico')),
       body: days.isEmpty
           ? EmptyState(
-              title: 'Ainda não há treinos registrados.',
-              actionLabel: 'Começar treino',
+              title: 'Seu histórico está vazio',
+              subtitle:
+                  'Finalize um treino ou entre com Google no Perfil para importar da nuvem.',
+              icon: Icons.history_toggle_off,
+              actionLabel: 'Ver treinos',
               onAction: () => context.go('/workouts'),
             )
           : ListView.separated(

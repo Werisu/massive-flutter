@@ -277,6 +277,160 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     );
   }
 
+  Future<void> _onCompletedSetTap(int setIndex) async {
+    if (_session == null) return;
+    final set = _currentExercise.sets[setIndex];
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Série ${set.setNumber}',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  '${formatWeight(set.weight)} × ${set.repetitions ?? '—'} reps'
+                  '${set.rir != null ? ' · RIR ${set.rir}' : ''}',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                PrimaryButton(
+                  label: 'Editar série',
+                  icon: Icons.edit,
+                  onPressed: () => Navigator.pop(context, 'edit'),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                SecondaryButton(
+                  label: 'Desfazer série',
+                  icon: Icons.undo,
+                  onPressed: () => Navigator.pop(context, 'undo'),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (action == 'undo') {
+      final updated = await ref.read(sessionsProvider.notifier).uncompleteSet(
+            session: _session!,
+            exerciseId: _currentExercise.exerciseId,
+            setIndex: setIndex,
+          );
+      setState(() {
+        _session = updated;
+        _showRest = false;
+      });
+      _prefillCurrentSet();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Série desfeita. Pode registrar de novo.')),
+      );
+    } else if (action == 'edit') {
+      await _editSetDialog(setIndex);
+    }
+  }
+
+  Future<void> _editSetDialog(int setIndex) async {
+    if (_session == null) return;
+    final set = _currentExercise.sets[setIndex];
+    final weightCtrl = TextEditingController(
+      text: set.weight == null
+          ? ''
+          : (set.weight == set.weight!.roundToDouble()
+              ? '${set.weight!.toInt()}'
+              : set.weight!.toStringAsFixed(1)),
+    );
+    final repsCtrl = TextEditingController(
+      text: set.repetitions?.toString() ?? '',
+    );
+    int? rir = set.rir;
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return AlertDialog(
+              title: Text('Editar série ${set.setNumber}'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    WeightInput(controller: weightCtrl),
+                    const SizedBox(height: AppSpacing.md),
+                    RepsInput(controller: repsCtrl),
+                    const SizedBox(height: AppSpacing.md),
+                    RirSelector(
+                      value: rir,
+                      onChanged: (v) => setModalState(() => rir = v),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancelar'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Salvar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (saved != true) {
+      weightCtrl.dispose();
+      repsCtrl.dispose();
+      return;
+    }
+
+    final weight = double.tryParse(weightCtrl.text.replaceAll(',', '.'));
+    final reps = int.tryParse(repsCtrl.text);
+    weightCtrl.dispose();
+    repsCtrl.dispose();
+
+    if (reps == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Informe as repetições.')),
+      );
+      return;
+    }
+
+    final updated = await ref.read(sessionsProvider.notifier).editSet(
+          session: _session!,
+          exerciseId: _currentExercise.exerciseId,
+          setIndex: setIndex,
+          weight: weight,
+          repetitions: reps,
+          rir: rir,
+        );
+    setState(() => _session = updated);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Série atualizada.')),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -454,6 +608,9 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                         set: set,
                         prescription: presc,
                         highlighted: isCurrent && !_showRest,
+                        onTap: set.completed
+                            ? () => _onCompletedSetTap(i)
+                            : null,
                       ),
                     );
                   }),
@@ -580,16 +737,19 @@ class _SetCard extends StatelessWidget {
     required this.set,
     required this.prescription,
     this.highlighted = false,
+    this.onTap,
   });
 
   final SetRecord set;
   final SetPrescription prescription;
   final bool highlighted;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return AppCard(
       highlighted: highlighted,
+      onTap: onTap,
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Row(
         children: [
@@ -627,10 +787,16 @@ class _SetCard extends StatelessWidget {
                     '${set.rir != null ? ' · RIR ${set.rir}' : ''}',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
+                  Text(
+                    'Toque para editar ou desfazer',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ],
               ],
             ),
           ),
+          if (set.completed)
+            const Icon(Icons.more_horiz, color: AppColors.textMuted),
         ],
       ),
     );
