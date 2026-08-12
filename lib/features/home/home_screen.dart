@@ -12,6 +12,7 @@ import '../../core/widgets/sync_status_card.dart';
 import '../../data/models/workout_session.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/seed/protocol_data.dart';
+import '../../data/services/history_grouping.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -209,11 +210,15 @@ class _LastWorkoutCard extends ConsumerWidget {
     final repo = ref.watch(sessionRepositoryProvider);
     final session = repo.getById(sessionId);
     if (session == null) return const SizedBox.shrink();
+    final dayId =
+        HistoryGrouping.dayKey(session.startedAt, session.workoutPlanId);
+    final day = HistoryGrouping.findById(repo.getFinishedSessions(), dayId);
     final plan = ProtocolData.planById(session.workoutPlanId);
     final date = DateFormat('dd/MM/yyyy').format(session.startedAt);
 
     SetRecord? highlight;
-    for (final ex in session.exercises) {
+    final exercises = day?.exercises ?? session.exercises;
+    for (final ex in exercises) {
       for (final set in ex.sets.reversed) {
         if (set.completed && set.weight != null) {
           highlight = set;
@@ -228,7 +233,7 @@ class _LastWorkoutCard extends ConsumerWidget {
         : ProtocolData.exerciseById(highlight.exerciseId)?.name;
 
     return AppCard(
-      onTap: () => context.push('/history/${session.id}'),
+      onTap: () => context.push('/history/day/$dayId'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -242,7 +247,10 @@ class _LastWorkoutCard extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            '${session.completedExercises}/${session.exercises.length} exercícios concluídos',
+            day == null
+                ? '${session.completedExercises}/${session.exercises.length} exercícios concluídos'
+                : '${day.completedExercises}/${day.exerciseCount} exercícios'
+                    '${day.sessionCount > 1 ? ' · ${day.sessionCount} registros unidos' : ''}',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           if (highlight != null && exerciseName != null) ...[

@@ -91,6 +91,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
+        path: '/history/day/:dayId',
+        builder: (context, state) {
+          final id = state.pathParameters['dayId']!;
+          return HistoryDayDetailScreen(dayId: id);
+        },
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
         path: '/history/:sessionId',
         builder: (context, state) {
           final id = state.pathParameters['sessionId']!;

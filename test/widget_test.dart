@@ -1,7 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:massive_arms/core/utils/formatters.dart';
 import 'package:massive_arms/data/models/enums.dart';
+import 'package:massive_arms/data/models/workout_session.dart';
 import 'package:massive_arms/data/seed/protocol_data.dart';
+import 'package:massive_arms/data/services/history_grouping.dart';
+import 'package:massive_arms/data/services/progress_analytics.dart';
 
 void main() {
   test('saudação conforme horário', () {
@@ -33,5 +36,114 @@ void main() {
       targetRepMax: 10,
     );
     expect(msg, contains('+1'));
+  });
+
+  test('agrupa sessões fragmentadas do mesmo dia', () {
+    final day = DateTime(2026, 3, 24, 10);
+    final sessions = [
+      WorkoutSession(
+        id: 'session-a',
+        workoutPlanId: 'plan_saturday',
+        startedAt: day,
+        finishedAt: day.add(const Duration(minutes: 20)),
+        exercises: [
+          SessionExercise(
+            workoutExerciseId: 'w1',
+            exerciseId: 'ex_scott_maquina',
+            order: 1,
+            sets: const [
+              SetRecord(
+                id: 's1',
+                exerciseId: 'ex_scott_maquina',
+                setType: SetType.working,
+                setNumber: 1,
+                weight: 30,
+                repetitions: 8,
+                completed: true,
+              ),
+            ],
+          ),
+        ],
+      ),
+      WorkoutSession(
+        id: 'session-b',
+        workoutPlanId: 'plan_saturday',
+        startedAt: day.add(const Duration(hours: 1)),
+        finishedAt: day.add(const Duration(hours: 1, minutes: 15)),
+        exercises: [
+          SessionExercise(
+            workoutExerciseId: 'w2',
+            exerciseId: 'ex_supino_reto',
+            order: 1,
+            sets: const [
+              SetRecord(
+                id: 's2',
+                exerciseId: 'ex_supino_reto',
+                setType: SetType.working,
+                setNumber: 1,
+                weight: 60,
+                repetitions: 8,
+                completed: true,
+              ),
+            ],
+          ),
+        ],
+      ),
+    ];
+
+    final days = HistoryGrouping.groupFinishedSessions(sessions);
+    expect(days.length, 1);
+    expect(days.first.sessionCount, 2);
+    expect(days.first.exerciseCount, 2);
+    expect(days.first.exercises.map((e) => e.exerciseId), containsAll([
+      'ex_scott_maquina',
+      'ex_supino_reto',
+    ]));
+  });
+
+  test('analytics calcula volume e melhor marca', () {
+    final at = DateTime(2026, 3, 24);
+    final sessions = [
+      WorkoutSession(
+        id: 'session-c',
+        workoutPlanId: 'plan_monday',
+        startedAt: at,
+        finishedAt: at.add(const Duration(minutes: 40)),
+        exercises: [
+          SessionExercise(
+            workoutExerciseId: 'w1',
+            exerciseId: 'ex_triceps_barra_v',
+            order: 1,
+            sets: [
+              SetRecord(
+                id: 's1',
+                exerciseId: 'ex_triceps_barra_v',
+                setType: SetType.working,
+                setNumber: 1,
+                weight: 40,
+                repetitions: 8,
+                completed: true,
+                completedAt: at,
+              ),
+              SetRecord(
+                id: 's2',
+                exerciseId: 'ex_triceps_barra_v',
+                setType: SetType.working,
+                setNumber: 2,
+                weight: 45,
+                repetitions: 8,
+                completed: true,
+                completedAt: at,
+              ),
+            ],
+          ),
+        ],
+      ),
+    ];
+
+    expect(ProgressAnalytics.totalVolume(sessions), 40 * 8 + 45 * 8);
+    final best = ProgressAnalytics.bestMarks(sessions);
+    expect(best.first.weight, 45);
+    expect(best.first.reps, 8);
   });
 }

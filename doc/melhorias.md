@@ -9,7 +9,7 @@ Lista priorizada de melhorias para o app Flutter, com base no protocolo, na sinc
 - [x] Pré-preencher carga/reps da **última série valendo** do mesmo exercício
 - Timer de descanso em **notificação** (continua se sair da tela)
 - “Desfazer série” e editar série já concluída
-- Agrupar o histórico por **dia de treino completo**, não só por sessão fragmentada do app antigo
+- [x] Agrupar o histórico por **dia de treino completo**, não só por sessão fragmentada do app antigo
 
 ---
 
@@ -24,9 +24,9 @@ Lista priorizada de melhorias para o app Flutter, com base no protocolo, na sinc
 
 ## 3. Progresso de verdade
 
-- Gráfico por exercício com filtro de período
-- “Melhor marca” (carga × reps) e volume semanal
-- Sugestão de progressão do protocolo (8→9→10→aumentar carga), sem mudar séries sozinho
+- [x] Gráfico por exercício com filtro de período
+- [x] “Melhor marca” (carga × reps) e volume semanal
+- [x] Sugestão de progressão do protocolo (8→9→10→aumentar carga), sem mudar séries sozinho
 
 ---
 
@@ -51,10 +51,22 @@ Lista priorizada de melhorias para o app Flutter, com base no protocolo, na sinc
 
 1. ~~Sync automático + feedback claro do histórico importado~~ ✅
 2. ~~Pré-preenchimento de carga/reps no treino~~ ✅
-3. Histórico unificado e progresso por exercício
+3. ~~Histórico unificado e progresso por exercício~~ ✅
 
-### Pacote inicial (implementado)
+### Pacotes implementados
 
+**Pacote 1+2**
 1. Sync automático ao abrir (se logado; re-sync a cada 15 min se stale)
-2. Pré-preenchimento de carga/reps/RIR (série anterior ou último treino)
-3. Status de sync visível na Home (toque para sync manual) + detalhes no Perfil
+2. Pré-preenchimento de carga/reps/RIR
+3. Status de sync na Home/Perfil
+
+**Pacote 3**
+1. Histórico agrupado por dia + plano (`N registros unidos`)
+2. Progresso com filtro 7/30/90/tudo, volume semanal, melhores marcas
+3. Sugestões de progressão do protocolo (orientação, sem alterar séries)
+
+### Próximo pacote sugerido
+
+1. Desfazer/editar série + timer de descanso em notificação
+2. Conflito local vs nuvem + SHA-1 release Android
+3. Splash/empty states, testes extras, iOS

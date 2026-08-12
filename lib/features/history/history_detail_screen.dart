@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/providers/app_providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/formatters.dart';
@@ -9,42 +10,51 @@ import '../../core/widgets/common_widgets.dart';
 import '../../core/widgets/input_widgets.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/seed/protocol_data.dart';
+import '../../data/services/history_grouping.dart';
 
-class HistoryDetailScreen extends ConsumerWidget {
-  const HistoryDetailScreen({super.key, required this.sessionId});
+class HistoryDayDetailScreen extends ConsumerWidget {
+  const HistoryDayDetailScreen({super.key, required this.dayId});
 
-  final String sessionId;
+  final String dayId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final session = ref.watch(sessionRepositoryProvider).getById(sessionId);
-    if (session == null) {
+    ref.watch(sessionsProvider);
+    final sessions =
+        ref.watch(sessionRepositoryProvider).getFinishedSessions();
+    final day = HistoryGrouping.findById(sessions, dayId);
+
+    if (day == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Treino')),
-        body: const EmptyState(title: 'Sessão não encontrada'),
+        body: const EmptyState(title: 'Dia de treino não encontrado'),
       );
     }
 
-    final plan = ProtocolData.planById(session.workoutPlanId);
-    final date = DateFormat("dd/MM/yyyy 'às' HH:mm").format(session.startedAt);
+    final plan = ProtocolData.planById(day.workoutPlanId);
+    final dateLabel = plan != null
+        ? '${plan.weekday.labelPt}, ${DateFormat('dd/MM/yyyy').format(day.date)}'
+        : DateFormat('dd/MM/yyyy').format(day.date);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(plan?.name ?? 'Treino'),
-      ),
+      appBar: AppBar(title: Text(day.title)),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
-          Text(date, style: Theme.of(context).textTheme.bodyMedium),
-          if (session.duration != null) ...[
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Duração: ${formatDuration(session.duration!)}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
+          Text(dateLabel, style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            [
+              if (day.totalDuration != null)
+                'Duração: ${formatDuration(day.totalDuration!)}',
+              'Volume: ${day.volume.round()} kg',
+              if (day.sessionCount > 1)
+                '${day.sessionCount} registros unidos neste dia',
+            ].join(' · '),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
           const SizedBox(height: AppSpacing.lg),
-          ...session.exercises.map((ex) {
+          ...day.exercises.map((ex) {
             final exercise = ProtocolData.exerciseById(ex.exerciseId);
             return Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.lg),
@@ -90,5 +100,34 @@ class HistoryDetailScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+/// Compat: `/history/:sessionId` abre o dia unificado da sessão.
+class HistoryDetailScreen extends ConsumerWidget {
+  const HistoryDetailScreen({super.key, required this.sessionId});
+
+  final String sessionId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sessions =
+        ref.watch(sessionRepositoryProvider).getFinishedSessions();
+    final asDay = HistoryGrouping.findById(sessions, sessionId);
+    if (asDay != null) {
+      return HistoryDayDetailScreen(dayId: sessionId);
+    }
+
+    final session = ref.watch(sessionRepositoryProvider).getById(sessionId);
+    if (session == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Treino')),
+        body: const EmptyState(title: 'Sessão não encontrada'),
+      );
+    }
+
+    final dayId =
+        HistoryGrouping.dayKey(session.startedAt, session.workoutPlanId);
+    return HistoryDayDetailScreen(dayId: dayId);
   }
 }
