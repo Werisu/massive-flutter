@@ -105,7 +105,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            'Sincronizado: ${result.importedSessions} treinos no Firebase'
+            'Sincronizado: +${result.newlyImported} novos · '
+            '${result.importedSessions} treinos na nuvem'
             '${result.profileName != null && result.profileName!.isNotEmpty ? ' · ${result.profileName}' : ''}',
           ),
         ),
@@ -124,6 +125,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget build(BuildContext context) {
     final prefs = ref.watch(preferencesProvider);
     final syncState = ref.watch(syncStatusProvider);
+    final syncUi = ref.watch(syncUiProvider);
     final authAsync = ref.watch(authStateProvider);
     final user = authAsync.valueOrNull;
     final authBusy = ref.watch(authControllerProvider).isLoading;
@@ -208,9 +210,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 const SizedBox(height: AppSpacing.md),
                 Text(
                   user != null
-                      ? 'Conta conectada\n'
-                          'Caminho: users/${user.uid}/data\n'
-                          '${prefs.lastSyncedAt != null ? 'Último sync: ${DateFormat('dd/MM/yyyy HH:mm').format(prefs.lastSyncedAt!)}' : 'Toque em sincronizar para importar o histórico'}'
+                      ? () {
+                          final last = syncUi.lastResult;
+                          final time = prefs.lastSyncedAt != null
+                              ? DateFormat('dd/MM/yyyy HH:mm')
+                                  .format(prefs.lastSyncedAt!)
+                              : null;
+                          final lines = <String>[
+                            'Conta conectada',
+                            'UID: ${user.uid}',
+                            if (time != null) 'Último sync: $time',
+                            if (last?.success == true)
+                              'Nuvem: ${last!.importedSessions} treinos'
+                                  '${last.newlyImported > 0 ? ' · +${last.newlyImported} importados agora' : ''}',
+                            if (last?.success == false)
+                              'Erro: ${last!.error}',
+                            if (time == null)
+                              'Toque em sincronizar para importar o histórico',
+                          ];
+                          return lines.join('\n');
+                        }()
                       : 'O login usa a mesma conta Google do Firebase para manter '
                           'perfil e histórico sincronizados entre dispositivos.',
                   style: Theme.of(context).textTheme.bodySmall,

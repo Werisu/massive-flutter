@@ -37,6 +37,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
   final _weightCtrl = TextEditingController();
   final _repsCtrl = TextEditingController();
   int? _rir;
+  String? _prefillHint;
 
   @override
   void initState() {
@@ -108,27 +109,58 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
 
   void _prefillCurrentSet() {
     final setIndex = _currentSetIndex;
+    if (setIndex == null || _session == null) {
+      setState(() => _prefillHint = null);
+      return;
+    }
+
+    final set = _currentExercise.sets[setIndex];
     final repo = ref.read(sessionRepositoryProvider);
-    final last = repo.getLastWorkingSet(_currentExercise.exerciseId);
+    final suggestion = repo.suggestPrefill(
+      exerciseId: _currentExercise.exerciseId,
+      setType: set.setType,
+      currentSets: _currentExercise.sets,
+      currentSetIndex: setIndex,
+    );
 
-    if (setIndex != null) {
-      final set = _currentExercise.sets[setIndex];
-      if (set.weight != null) {
-        _weightCtrl.text = _formatNum(set.weight!);
-      } else if (last?.weight != null) {
-        _weightCtrl.text = _formatNum(last!.weight!);
-      } else {
-        _weightCtrl.clear();
-      }
+    // Já preenchido na própria série (retomada)
+    if (set.weight != null) {
+      _weightCtrl.text = _formatNum(set.weight!);
+    } else if (suggestion?.weight != null) {
+      _weightCtrl.text = _formatNum(suggestion!.weight!);
+    } else {
+      _weightCtrl.clear();
+    }
 
-      if (set.repetitions != null) {
-        _repsCtrl.text = '${set.repetitions}';
+    if (set.repetitions != null) {
+      _repsCtrl.text = '${set.repetitions}';
+    } else if (suggestion?.repetitions != null) {
+      final s = suggestion!;
+      final shouldPrefillReps = set.setType == SetType.working ||
+          s.sourceType == set.setType ||
+          !s.fromHistory;
+      if (shouldPrefillReps) {
+        _repsCtrl.text = '${s.repetitions}';
       } else {
         _repsCtrl.clear();
       }
-      _rir = set.rir;
+    } else {
+      _repsCtrl.clear();
     }
-    setState(() {});
+
+    _rir = set.rir ?? suggestion?.rir;
+
+    String? hint;
+    if (suggestion != null &&
+        (suggestion.weight != null || suggestion.repetitions != null)) {
+      final origin =
+          suggestion.fromHistory ? 'Último treino' : 'Série anterior';
+      hint =
+          '$origin: ${formatWeight(suggestion.weight)} × ${suggestion.repetitions ?? '—'} reps'
+          '${suggestion.rir != null ? ' · RIR ${suggestion.rir}' : ''}';
+    }
+
+    setState(() => _prefillHint = hint);
   }
 
   String _formatNum(double v) =>
@@ -445,6 +477,40 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                       '${prescription.type.labelPt} · ${prescription.repsLabel} reps',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
+                    if (_prefillHint != null) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.12),
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.radiusMd),
+                          border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.history,
+                                size: 18, color: AppColors.primaryLight),
+                            const SizedBox(width: AppSpacing.sm),
+                            Expanded(
+                              child: Text(
+                                'Pré-preenchido · $_prefillHint',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: AppColors.primaryLight,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.md),
                     Row(
                       children: [

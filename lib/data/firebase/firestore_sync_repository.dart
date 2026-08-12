@@ -363,7 +363,7 @@ class FirestoreSyncRepository {
   }
 
   Future<SyncResult> pullAndMerge({
-    required Future<void> Function(List<WorkoutSession> remote) mergeSessions,
+    required Future<int> Function(List<WorkoutSession> remote) mergeSessions,
     required Future<void> Function(UserProfile profile) applyProfile,
   }) async {
     if (!isFirebaseReady) {
@@ -380,9 +380,10 @@ class FirestoreSyncRepository {
         await applyProfile(profile);
       }
       final sessions = await fetchLegacySessions();
-      await mergeSessions(sessions);
+      final newlyImported = await mergeSessions(sessions);
       return SyncResult.ok(
         importedSessions: sessions.length,
+        newlyImported: newlyImported,
         profileName: profile?.name,
       );
     } catch (e, st) {
@@ -396,17 +397,20 @@ class SyncResult {
   const SyncResult._({
     required this.success,
     this.importedSessions = 0,
+    this.newlyImported = 0,
     this.profileName,
     this.error,
   });
 
   factory SyncResult.ok({
     required int importedSessions,
+    int newlyImported = 0,
     String? profileName,
   }) =>
       SyncResult._(
         success: true,
         importedSessions: importedSessions,
+        newlyImported: newlyImported,
         profileName: profileName,
       );
 
@@ -415,6 +419,7 @@ class SyncResult {
 
   final bool success;
   final int importedSessions;
+  final int newlyImported;
   final String? profileName;
   final String? error;
 }

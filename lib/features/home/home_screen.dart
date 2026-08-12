@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/widgets/common_widgets.dart';
+import '../../core/widgets/sync_status_card.dart';
 import '../../data/models/workout_session.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/seed/protocol_data.dart';
@@ -23,18 +24,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeAutoSync());
-  }
-
-  Future<void> _maybeAutoSync() async {
-    final prefs = ref.read(preferencesProvider);
-    if (prefs.lastSyncedAt != null) return;
-    if (!prefs.cloudSyncEnabled) return;
-    final auth = ref.read(authRepositoryProvider);
-    if (!auth.isFirebaseReady || !auth.isSignedIn) return;
-    try {
-      await ref.read(syncStatusProvider.notifier).syncNow();
-    } catch (_) {}
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(syncStatusProvider.notifier).autoSyncIfNeeded();
+    });
   }
 
   @override
@@ -64,7 +56,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
             ),
             const SizedBox(height: AppSpacing.md),
-            _GoogleLoginBanner(),
+            const SyncStatusCard(),
             const SizedBox(height: AppSpacing.lg),
             SectionHeader(title: 'Treino de hoje'),
             const SizedBox(height: AppSpacing.md),
@@ -332,75 +324,6 @@ class _ShortcutTile extends StatelessWidget {
           Icon(icon, color: AppColors.primary),
           const SizedBox(width: AppSpacing.md),
           Text(label, style: Theme.of(context).textTheme.titleMedium),
-        ],
-      ),
-    );
-  }
-}
-
-class _GoogleLoginBanner extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authStateProvider).valueOrNull;
-    if (user != null) {
-      return AppCard(
-        child: Row(
-          children: [
-            const Icon(Icons.cloud_done_outlined, color: AppColors.success),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Text(
-                'Sincronizado · ${user.email ?? user.displayName ?? 'Google'}',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ),
-            TextButton(
-              onPressed: () => context.go('/profile'),
-              child: const Text('Conta'),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return AppCard(
-      highlighted: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Entre com Google',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Para puxar seu histórico e manter os treinos sincronizados na nuvem.',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          PrimaryButton(
-            label: 'Entrar com Google',
-            icon: Icons.login,
-            onPressed: () async {
-              try {
-                await ref
-                    .read(authControllerProvider.notifier)
-                    .signInWithGoogleAndSync();
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Login e sincronização concluídos.')),
-                );
-              } catch (e) {
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Falha no login: $e'),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
-              }
-            },
-          ),
         ],
       ),
     );

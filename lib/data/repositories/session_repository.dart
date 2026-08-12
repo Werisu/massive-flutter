@@ -61,18 +61,65 @@ class SessionRepository {
 
   /// Last completed set for an exercise across finished sessions.
   SetRecord? getLastWorkingSet(String exerciseId) {
+    return getLastSetOfType(exerciseId, SetType.working) ??
+        _lastAnyCompletedSet(exerciseId);
+  }
+
+  /// Última série concluída do tipo indicado (mais recente primeiro).
+  SetRecord? getLastSetOfType(String exerciseId, SetType type) {
     for (final session in getFinishedSessions()) {
       for (final exercise in session.exercises) {
         if (exercise.exerciseId != exerciseId) continue;
-        final working = exercise.sets
-            .where((s) => s.completed && s.setType == SetType.working)
+        final matches = exercise.sets
+            .where((s) => s.completed && s.setType == type)
             .toList();
-        if (working.isNotEmpty) return working.last;
+        if (matches.isNotEmpty) return matches.last;
+      }
+    }
+    return null;
+  }
+
+  SetRecord? _lastAnyCompletedSet(String exerciseId) {
+    for (final session in getFinishedSessions()) {
+      for (final exercise in session.exercises) {
+        if (exercise.exerciseId != exerciseId) continue;
         final any = exercise.sets.where((s) => s.completed).toList();
         if (any.isNotEmpty) return any.last;
       }
     }
     return null;
+  }
+
+  /// Sugestão de pré-preenchimento: sessão atual → mesmo tipo histórico → valendo.
+  PrefillSuggestion? suggestPrefill({
+    required String exerciseId,
+    required SetType setType,
+    required List<SetRecord> currentSets,
+    required int currentSetIndex,
+  }) {
+    SetRecord? fromSession;
+    for (var i = currentSetIndex - 1; i >= 0; i--) {
+      final s = currentSets[i];
+      if (!s.completed) continue;
+      if (s.weight == null && s.repetitions == null) continue;
+      fromSession = s;
+      if (s.setType == setType) break;
+    }
+
+    final lastSameType = getLastSetOfType(exerciseId, setType);
+    final lastWorking = getLastSetOfType(exerciseId, SetType.working);
+
+    final source = fromSession ?? lastSameType ?? lastWorking;
+    if (source == null) return null;
+
+    final fromHistory = fromSession == null;
+    return PrefillSuggestion(
+      weight: source.weight,
+      repetitions: source.repetitions,
+      rir: source.rir,
+      fromHistory: fromHistory,
+      sourceType: source.setType,
+    );
   }
 
   /// History of completed working sets for charts (oldest → newest).
@@ -211,4 +258,20 @@ class SessionRepository {
   WorkoutPlan? planForSession(WorkoutSession session) {
     return ProtocolData.planById(session.workoutPlanId);
   }
+}
+
+class PrefillSuggestion {
+  const PrefillSuggestion({
+    this.weight,
+    this.repetitions,
+    this.rir,
+    required this.fromHistory,
+    required this.sourceType,
+  });
+
+  final double? weight;
+  final int? repetitions;
+  final int? rir;
+  final bool fromHistory;
+  final SetType sourceType;
 }

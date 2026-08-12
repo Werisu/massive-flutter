@@ -6,7 +6,7 @@ Lista priorizada de melhorias para o app Flutter, com base no protocolo, na sinc
 
 ## 1. Experiência do treino (prioridade alta)
 
-- Pré-preencher carga/reps da **última série valendo** do mesmo exercício
+- [x] Pré-preencher carga/reps da **última série valendo** do mesmo exercício
 - Timer de descanso em **notificação** (continua se sair da tela)
 - “Desfazer série” e editar série já concluída
 - Agrupar o histórico por **dia de treino completo**, não só por sessão fragmentada do app antigo
@@ -15,8 +15,8 @@ Lista priorizada de melhorias para o app Flutter, com base no protocolo, na sinc
 
 ## 2. Sincronização / conta
 
-- Tela clara de status: logado, último sync, quantos treinos importados
-- Sync automático ao abrir o app (quando já estiver logado)
+- [x] Tela clara de status: logado, último sync, quantos treinos importados
+- [x] Sync automático ao abrir o app (quando já estiver logado)
 - Resolver conflito local vs nuvem (hoje o merge é simples)
 - Login Google estável no Android (SHA-1 do keystore de release)
 
@@ -49,14 +49,12 @@ Lista priorizada de melhorias para o app Flutter, com base no protocolo, na sinc
 
 ## Ordem sugerida de implementação
 
-1. Sync automático + feedback claro do histórico importado
-2. Pré-preenchimento de carga/reps no treino
+1. ~~Sync automático + feedback claro do histórico importado~~ ✅
+2. ~~Pré-preenchimento de carga/reps no treino~~ ✅
 3. Histórico unificado e progresso por exercício
 
-### Pacote inicial recomendado
+### Pacote inicial (implementado)
 
-Implementar primeiro:
-
-1. Sync automático ao abrir (se logado)
-2. Pré-preenchimento de carga/reps
-3. Status de sync visível na UI
+1. Sync automático ao abrir (se logado; re-sync a cada 15 min se stale)
+2. Pré-preenchimento de carga/reps/RIR (série anterior ou último treino)
+3. Status de sync visível na Home (toque para sync manual) + detalhes no Perfil

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -171,6 +173,62 @@ final firestoreSyncProvider = Provider<FirestoreSyncRepository>((ref) {
   return FirestoreSyncRepository();
 });
 
+/// Intervalo mínimo entre syncs automáticos.
+const autoSyncInterval = Duration(minutes: 15);
+
+class SyncUiState {
+  const SyncUiState({
+    this.isSyncing = false,
+    this.lastResult,
+    this.lastAttemptAt,
+    this.autoSyncDoneForUid,
+  });
+
+  final bool isSyncing;
+  final SyncResult? lastResult;
+  final DateTime? lastAttemptAt;
+  final String? autoSyncDoneForUid;
+
+  SyncUiState copyWith({
+    bool? isSyncing,
+    SyncResult? lastResult,
+    DateTime? lastAttemptAt,
+    String? autoSyncDoneForUid,
+  }) {
+    return SyncUiState(
+      isSyncing: isSyncing ?? this.isSyncing,
+      lastResult: lastResult ?? this.lastResult,
+      lastAttemptAt: lastAttemptAt ?? this.lastAttemptAt,
+      autoSyncDoneForUid: autoSyncDoneForUid ?? this.autoSyncDoneForUid,
+    );
+  }
+}
+
+final syncUiProvider =
+    StateNotifierProvider<SyncUiNotifier, SyncUiState>((ref) {
+  return SyncUiNotifier();
+});
+
+class SyncUiNotifier extends StateNotifier<SyncUiState> {
+  SyncUiNotifier() : super(const SyncUiState());
+
+  void setSyncing(bool value) {
+    state = state.copyWith(isSyncing: value);
+  }
+
+  void setResult(SyncResult result) {
+    state = state.copyWith(
+      isSyncing: false,
+      lastResult: result,
+      lastAttemptAt: DateTime.now(),
+    );
+  }
+
+  void markAutoSynced(String uid) {
+    state = state.copyWith(autoSyncDoneForUid: uid);
+  }
+}
+
 final syncStatusProvider =
     StateNotifierProvider<SyncStatusNotifier, AsyncValue<SyncResult?>>((ref) {
   return SyncStatusNotifier(ref);
@@ -180,13 +238,23 @@ class SyncStatusNotifier extends StateNotifier<AsyncValue<SyncResult?>> {
   SyncStatusNotifier(this._ref) : super(const AsyncValue.data(null));
 
   final Ref _ref;
+  bool _running = false;
 
   Future<SyncResult> syncNow({bool pushLocalFinished = true}) async {
+    if (_running) {
+      return state.valueOrNull ??
+          SyncResult.fail('Sincronização já em andamento.');
+    }
+    _running = true;
     state = const AsyncValue.loading();
+    _ref.read(syncUiProvider.notifier).setSyncing(true);
+
     final auth = _ref.read(authRepositoryProvider);
     if (!auth.isSignedIn) {
       final fail = SyncResult.fail('Faça login com Google para sincronizar.');
       state = AsyncValue.data(fail);
+      _ref.read(syncUiProvider.notifier).setResult(fail);
+      _running = false;
       return fail;
     }
 
@@ -199,7 +267,7 @@ class SyncStatusNotifier extends StateNotifier<AsyncValue<SyncResult?>> {
         await prefsNotifier.applyProfile(profile);
       },
       mergeSessions: (remote) async {
-        await sessionsNotifier.mergeRemote(remote);
+        return sessionsNotifier.mergeRemote(remote);
       },
     );
 
@@ -228,6 +296,35 @@ class SyncStatusNotifier extends StateNotifier<AsyncValue<SyncResult?>> {
     }
 
     state = AsyncValue.data(result);
+    _ref.read(syncUiProvider.notifier).setResult(result);
+    _running = false;
+    return result;
+  }
+
+  /// Sync automático se logado e dados stale / nunca sincronizados.
+  Future<SyncResult?> autoSyncIfNeeded() async {
+    final auth = _ref.read(authRepositoryProvider);
+    final prefs = _ref.read(preferencesProvider);
+    final ui = _ref.read(syncUiProvider);
+
+    if (!prefs.cloudSyncEnabled) return null;
+    if (!auth.isFirebaseReady || !auth.isSignedIn) return null;
+
+    final uid = auth.currentUser?.uid;
+    if (uid == null) return null;
+
+    final last = prefs.lastSyncedAt;
+    final stale = last == null ||
+        DateTime.now().difference(last) >= autoSyncInterval;
+
+    // Evita spam na mesma sessão se já sincronizou há pouco para este UID
+    if (!stale && ui.autoSyncDoneForUid == uid) return null;
+    if (_running) return null;
+
+    final result = await syncNow();
+    if (result.success) {
+      _ref.read(syncUiProvider.notifier).markAutoSynced(uid);
+    }
     return result;
   }
 
@@ -235,6 +332,18 @@ class SyncStatusNotifier extends StateNotifier<AsyncValue<SyncResult?>> {
     return id.contains('-') && !id.startsWith('session-');
   }
 }
+
+/// Dispara sync automático quando o usuário autenticar / app abrir.
+final autoSyncBootstrapProvider = Provider<void>((ref) {
+  ref.listen<AsyncValue<User?>>(authStateProvider, (prev, next) {
+    final user = next.valueOrNull;
+    if (user == null) return;
+    // Debounce leve após auth
+    scheduleMicrotask(() {
+      ref.read(syncStatusProvider.notifier).autoSyncIfNeeded();
+    });
+  });
+});
 
 final authControllerProvider =
     StateNotifierProvider<AuthController, AsyncValue<User?>>((ref) {
@@ -255,8 +364,8 @@ class AuthController extends StateNotifier<AsyncValue<User?>> {
       await _ref.read(preferencesProvider.notifier).applyAuthUser(user);
       state = AsyncValue.data(user);
 
-      // Sync automático após login
       await _ref.read(syncStatusProvider.notifier).syncNow();
+      _ref.read(syncUiProvider.notifier).markAutoSynced(user.uid);
       return user;
     } catch (e, st) {
       state = AsyncValue.error(e, st);
