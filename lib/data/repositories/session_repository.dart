@@ -138,6 +138,42 @@ class SessionRepository {
     return records;
   }
 
+  /// Histórico agrupado por dia de treino (mais recente primeiro).
+  List<ExerciseDayLog> getExerciseDayHistory(String exerciseId) {
+    final logs = <ExerciseDayLog>[];
+    for (final session in getFinishedSessions()) {
+      for (final exercise in session.exercises) {
+        if (exercise.exerciseId != exerciseId) continue;
+        final working = exercise.sets
+            .where((s) => s.completed && s.setType == SetType.working)
+            .toList();
+        if (working.isEmpty) continue;
+
+        final date = working
+                .map((s) => s.completedAt)
+                .whereType<DateTime>()
+                .fold<DateTime?>(
+                  null,
+                  (best, d) => best == null || d.isAfter(best) ? d : best,
+                ) ??
+            session.finishedAt ??
+            session.startedAt;
+
+        logs.add(
+          ExerciseDayLog(
+            date: DateTime(date.year, date.month, date.day),
+            sessionId: session.id,
+            workoutPlanId: session.workoutPlanId,
+            sets: working,
+          ),
+        );
+      }
+    }
+
+    logs.sort((a, b) => b.date.compareTo(a.date));
+    return logs;
+  }
+
   Future<WorkoutSession> startSession(WorkoutPlan plan) async {
     final existing = getActiveSession();
     if (existing != null && !existing.isFinished) {
@@ -342,6 +378,45 @@ class SessionRepository {
 
   WorkoutPlan? planForSession(WorkoutSession session) {
     return ProtocolData.planById(session.workoutPlanId);
+  }
+}
+
+/// Um dia com séries valendo registradas para um exercício.
+class ExerciseDayLog {
+  const ExerciseDayLog({
+    required this.date,
+    required this.sessionId,
+    required this.workoutPlanId,
+    required this.sets,
+  });
+
+  final DateTime date;
+  final String sessionId;
+  final String workoutPlanId;
+  final List<SetRecord> sets;
+
+  double get volume {
+    var v = 0.0;
+    for (final s in sets) {
+      if (s.weight != null && s.repetitions != null) {
+        v += s.weight! * s.repetitions!;
+      }
+    }
+    return v;
+  }
+
+  SetRecord? get bestSet {
+    SetRecord? best;
+    var bestScore = -1.0;
+    for (final s in sets) {
+      if (s.weight == null || s.repetitions == null) continue;
+      final score = s.weight! * s.repetitions!;
+      if (score > bestScore) {
+        bestScore = score;
+        best = s;
+      }
+    }
+    return best;
   }
 }
 

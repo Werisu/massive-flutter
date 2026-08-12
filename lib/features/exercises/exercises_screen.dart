@@ -5,10 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../../core/providers/app_providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/utils/formatters.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../core/widgets/input_widgets.dart';
 import '../../data/models/enums.dart';
 import '../../data/models/exercise.dart';
+import '../../data/models/workout_session.dart';
+import '../../data/repositories/session_repository.dart';
 import '../../data/seed/protocol_data.dart';
 
 class ExercisesScreen extends ConsumerStatefulWidget {
@@ -30,7 +33,9 @@ class _ExercisesScreenState extends ConsumerState<ExercisesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(sessionsProvider);
     final all = ref.watch(allExercisesProvider);
+    final repo = ref.watch(sessionRepositoryProvider);
     final query = _search.text.trim().toLowerCase();
 
     final filtered = all.where((e) {
@@ -96,6 +101,7 @@ class _ExercisesScreenState extends ConsumerState<ExercisesScreen> {
             child: filtered.isEmpty
                 ? const EmptyState(
                     title: 'Nenhum exercício encontrado',
+                    subtitle: 'Tente outro nome ou limpe o filtro muscular.',
                     icon: Icons.search_off,
                   )
                 : ListView.separated(
@@ -107,6 +113,7 @@ class _ExercisesScreenState extends ConsumerState<ExercisesScreen> {
                       final exercise = filtered[index];
                       return ExerciseCard(
                         exercise: exercise,
+                        lastSet: repo.getLastWorkingSet(exercise.id),
                         onTap: () =>
                             context.push('/exercise/${exercise.id}'),
                       );
@@ -124,38 +131,68 @@ class ExerciseCard extends StatelessWidget {
     super.key,
     required this.exercise,
     required this.onTap,
+    this.lastSet,
   });
 
   final Exercise exercise;
   final VoidCallback onTap;
+  final SetRecord? lastSet;
 
   @override
   Widget build(BuildContext context) {
     final plans = ProtocolData.plansContainingExercise(exercise.id);
+    final summary = ProtocolData.setsSummary(exercise.id);
 
     return AppCard(
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(exercise.name, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: AppSpacing.sm),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              MuscleGroupChip(group: exercise.muscleGroup),
-              const Spacer(),
+              Expanded(
+                child: Text(
+                  exercise.name,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
               Icon(
-                exercise.hasVideo ? Icons.videocam : Icons.videocam_off_outlined,
+                exercise.hasVideo
+                    ? Icons.videocam
+                    : Icons.videocam_off_outlined,
                 size: 18,
-                color: AppColors.textMuted,
+                color: exercise.hasVideo
+                    ? AppColors.primaryLight
+                    : AppColors.textMuted,
               ),
             ],
           ),
+          const SizedBox(height: AppSpacing.sm),
+          MuscleGroupChip(group: exercise.muscleGroup),
+          if (summary != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              summary,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
           if (plans.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(
               'Treinos: ${plans.map((p) => p.weekday.labelPt).join(', ')}',
               style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+          if (lastSet != null &&
+              (lastSet!.weight != null || lastSet!.repetitions != null)) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Último: ${formatWeight(lastSet!.weight)} × ${lastSet!.repetitions ?? '—'} reps',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.primaryLight,
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
           ],
         ],

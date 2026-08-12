@@ -22,13 +22,42 @@ abstract final class GuideContent {
 
   static const topics = <GuideTopic>[
     GuideTopic(
+      id: 'weekly_split',
+      title: 'Divisão semanal',
+      icon: 'calendar',
+      body:
+          'A divisão do protocolo Massive Arms and Shoulders:\n\n'
+          '• Segunda — Tríceps e Costas\n'
+          '• Terça — Inferiores\n'
+          '• Quarta — Bíceps, Ombro e Peito\n'
+          '• Quinta — Day Off\n'
+          '• Sexta — Tríceps e Costas\n'
+          '• Sábado — Bíceps, Ombro e Peito\n'
+          '• Domingo — Abdômen e Panturrilha\n\n'
+          'A quinta-feira é descanso programado. '
+          'Não invente treinos extras fora dessa estrutura sem orientação.',
+    ),
+    GuideTopic(
+      id: 'set_types',
+      title: 'Tipos de séries',
+      icon: 'layers',
+      body:
+          'Cada exercício do protocolo pode ter três tipos de séries:\n\n'
+          '• Aquecimento — em geral 10 reps, carga leve para preparar o padrão.\n'
+          '• Preparatórias — faixa tipicamente 2–7 reps, aproximando a carga de trabalho.\n'
+          '• Valendo — faixa 8–10 reps; são as séries que contam para progressão.\n\n'
+          'A estrutura (quantas séries de cada tipo) já vem definida no PDF. '
+          'Não altere arbitrariamente o número de séries.',
+    ),
+    GuideTopic(
       id: 'execution',
       title: 'Execução dos exercícios',
       icon: 'fitness_center',
       body:
           'Priorize amplitude completa e qualidade técnica antes de aumentar carga.\n\n'
           'O protocolo enfatiza tensão mecânica com boa execução. '
-          'Não sacrifique a forma para carregar mais peso.',
+          'Não sacrifique a forma para carregar mais peso.\n\n'
+          'Quando houver vídeo cadastrado no app, use-o como referência de execução.',
     ),
     GuideTopic(
       id: 'progression',
@@ -39,11 +68,13 @@ abstract final class GuideContent {
           '1. Melhorar execução e amplitude.\n'
           '2. Fazer mais repetições com o mesmo peso.\n'
           '3. Aumentar o peso.\n'
-          '4. Aumentar o número de séries semanais.\n\n'
+          '4. Aumentar o número de séries semanais (só se o protocolo indicar).\n\n'
           'Não altere arbitrariamente o número de séries — a estrutura já está '
           'estabelecida no protocolo.\n\n'
           'Na faixa de 8–10 reps: ao atingir 10 com boa execução, considere '
-          'um pequeno aumento de carga no próximo treino.',
+          'um pequeno aumento de carga no próximo treino.\n\n'
+          'O app pode sugerir essa progressão com base no seu histórico, '
+          'sem mudar as séries sozinho.',
     ),
     GuideTopic(
       id: 'tension',
@@ -52,7 +83,8 @@ abstract final class GuideContent {
       body:
           'A tensão mecânica é o principal estímulo hipertrófico do protocolo.\n\n'
           'Mantenha controle do movimento e evite impulso excessivo, '
-          'especialmente nas séries valendo.',
+          'especialmente nas séries valendo.\n\n'
+          'Amplitude completa + carga adequada + controle = mais tensão útil.',
     ),
     GuideTopic(
       id: 'rest',
@@ -62,7 +94,9 @@ abstract final class GuideContent {
           'Segundo o protocolo:\n\n'
           '• Séries de aquecimento/preparatórias: aproximadamente 1 minuto.\n'
           '• Séries valendo: 2–5 minutos, conforme exercício e intensidade.\n\n'
-          'No app você pode ajustar, pausar ou pular o cronômetro.',
+          'No app você pode ajustar, pausar, reiniciar ou pular o cronômetro. '
+          'Em Android/iOS o fim do descanso pode disparar notificação mesmo '
+          'fora da tela.',
     ),
     GuideTopic(
       id: 'rir',
@@ -73,7 +107,24 @@ abstract final class GuideContent {
           'Exemplo: falharia na 10ª, parou na 9ª → RIR = 1.\n\n'
           'Séries valendo:\n'
           '• Multiarticulares: 0–2 RIR (na última série pode chegar à falha).\n'
-          '• Monoarticulares: pode explorar falha nas séries valendo.',
+          '• Monoarticulares: pode explorar falha nas séries valendo.\n\n'
+          'Registre o RIR após cada série valendo para acompanhar intensidade '
+          'ao longo das semanas.',
+    ),
+    GuideTopic(
+      id: 'logging',
+      title: 'Como registrar o treino',
+      icon: 'edit',
+      body:
+          'Durante a sessão:\n\n'
+          '1. Informe carga, reps e RIR da série atual.\n'
+          '2. Marque a série como concluída.\n'
+          '3. Use o timer de descanso entre séries.\n'
+          '4. Se errar, desfaça ou edite a série já marcada.\n\n'
+          'O app pré-preenche carga/reps com base na última série relevante '
+          'do mesmo exercício.\n\n'
+          'Ao terminar, finalize o treino para salvar no histórico local '
+          '(e sincronizar se estiver logado).',
     ),
     GuideTopic(
       id: 'shoes',
@@ -92,7 +143,8 @@ abstract final class GuideContent {
       body:
           'Controle a fase excêntrica e a concêntrica.\n\n'
           'Evite acelerar demais o movimento nas séries valendo; '
-          'a cadência controlada favorece tensão mecânica.',
+          'a cadência controlada favorece tensão mecânica e reduz o uso '
+          'de impulso.',
     ),
     GuideTopic(
       id: 'sleep',

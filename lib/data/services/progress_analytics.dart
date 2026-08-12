@@ -248,6 +248,56 @@ abstract final class ProgressAnalytics {
     return tips.take(limit).toList();
   }
 
+  static ProgressionTip? tipForExercise(
+    List<WorkoutSession> sessions,
+    String exerciseId,
+  ) {
+    final exercise = ProtocolData.exerciseById(exerciseId);
+    if (exercise == null) return null;
+    final points = workingPoints(sessions, exerciseId: exerciseId);
+    if (points.length < 2) {
+      if (points.isEmpty) return null;
+      final last = points.last;
+      if (last.reps >= 10) {
+        return ProgressionTip(
+          exerciseId: exerciseId,
+          exerciseName: exercise.name,
+          message:
+              'Você atingiu o topo da faixa. Considere um pequeno aumento de carga no próximo treino.',
+          detail: '${last.weight.round()} kg × ${last.reps} reps',
+        );
+      }
+      return null;
+    }
+    return _tipFor(
+      exerciseId,
+      exercise.name,
+      points[points.length - 2],
+      points.last,
+    );
+  }
+
+  static ExerciseBestMark? bestMarkForExercise(
+    List<WorkoutSession> sessions,
+    String exerciseId,
+  ) {
+    final points = workingPoints(sessions, exerciseId: exerciseId);
+    if (points.isEmpty) return null;
+    WorkingSetPoint best = points.first;
+    for (final p in points.skip(1)) {
+      if (p.volume > best.volume) best = p;
+    }
+    final name =
+        ProtocolData.exerciseById(exerciseId)?.name ?? exerciseId;
+    return ExerciseBestMark(
+      exerciseId: exerciseId,
+      exerciseName: name,
+      weight: best.weight,
+      reps: best.reps,
+      at: best.at,
+    );
+  }
+
   static ProgressionTip? _tipFor(
     String id,
     String name,

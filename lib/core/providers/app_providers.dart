@@ -428,4 +428,4 @@ final allPlansProvider = Provider<List<WorkoutPlan>>((ref) {
   return ProtocolData.plans;
 });
 
-final allExercisesProvider = Provider((ref) => ProtocolData.exercises);
+final allExercisesProvider = Provider((ref) => ProtocolData.catalog);

@@ -1,10 +1,29 @@
 import '../models/enums.dart';
 import '../models/exercise.dart';
 import '../models/workout_plan.dart';
+import 'exercise_media.dart';
 
 /// Protocol data from "Massive Arms and Shoulders" as documented in instruction.md.
 /// Do not invent exercises or alter set/rep structure.
 abstract final class ProtocolData {
+  static Exercise _withMedia(Exercise e) {
+    final video = ExerciseMedia.videoUrlFor(e.id);
+    final thumb = ExerciseMedia.thumbnailUrlFor(e.id);
+    if (video == null && thumb == null) return e;
+    return Exercise(
+      id: e.id,
+      name: e.name,
+      muscleGroup: e.muscleGroup,
+      description: e.description,
+      videoUrl: video ?? e.videoUrl,
+      thumbnailUrl: thumb ?? e.thumbnailUrl,
+      instructions: e.instructions,
+    );
+  }
+
+  /// Exercícios do protocolo com mídia cadastrada (quando houver).
+  static List<Exercise> get catalog =>
+      exercises.map(_withMedia).toList(growable: false);
   static List<SetPrescription> _expand({
     int warmupSets = 0,
     int warmupReps = 10,
@@ -98,9 +117,33 @@ abstract final class ProtocolData {
 
   static Exercise? exerciseById(String id) {
     for (final e in exercises) {
-      if (e.id == id) return e;
+      if (e.id == id) return _withMedia(e);
     }
     return null;
+  }
+
+  /// Primeira ocorrência do exercício em um plano (prescrição do protocolo).
+  static WorkoutExercise? firstPrescription(String exerciseId) {
+    for (final plan in plans) {
+      for (final we in plan.exercises) {
+        if (we.exerciseId == exerciseId) return we;
+      }
+    }
+    return null;
+  }
+
+  /// Resumo textual das séries (Aquecimento / Preparatórias / Valendo).
+  static String? setsSummary(String exerciseId) {
+    final we = firstPrescription(exerciseId);
+    if (we == null) return null;
+    final warmup = we.sets.where((s) => s.type == SetType.warmup).length;
+    final prep = we.sets.where((s) => s.type == SetType.preparation).length;
+    final working = we.sets.where((s) => s.type == SetType.working).length;
+    final parts = <String>[];
+    if (warmup > 0) parts.add('Aquecimento ${warmup}x10');
+    if (prep > 0) parts.add('Preparatórias ${prep}x2-7');
+    if (working > 0) parts.add('Valendo ${working}x8-10');
+    return parts.isEmpty ? null : parts.join(' · ');
   }
 
   static final List<WorkoutPlan> plans = [

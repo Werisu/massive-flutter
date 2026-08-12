@@ -32,9 +32,9 @@ Lista priorizada de melhorias para o app Flutter, com base no protocolo, na sinc
 
 ## 4. Dados do protocolo
 
-- Biblioteca de exercícios com histórico no detalhe
-- Guia do PDF mais completo (se o PDF estiver no projeto)
-- URLs de vídeo quando existirem (sem inventar)
+- [x] Biblioteca de exercícios com histórico no detalhe
+- [x] Guia do PDF mais completo (divisão, tipos de série, registro)
+- [x] URLs de vídeo quando existirem (sem inventar) — cadastro em `exercise_media.dart`
 
 ---
 
@@ -53,6 +53,7 @@ Lista priorizada de melhorias para o app Flutter, com base no protocolo, na sinc
 2. ~~Pré-preenchimento de carga/reps no treino~~ ✅
 3. ~~Histórico unificado e progresso por exercício~~ ✅
 4. ~~Desfazer/editar série + timer com notificação + merge seguro + splash~~ ✅
+5. ~~Biblioteca de exercícios + guia + vídeos (arquitetura)~~ ✅
 
 ### Pacotes implementados
 
@@ -72,9 +73,15 @@ Lista priorizada de melhorias para o app Flutter, com base no protocolo, na sinc
 3. Merge local↔nuvem mais seguro (treino ativo preservado; upsert só se progresso maior/mais recente)
 4. Splash Flutter + empty states + `doc/android-sha1.md`
 
+**Pacote 5**
+1. Detalhe do exercício com protocolo, gráfico, melhor marca, tip e histórico por dia
+2. Lista com última performance + resumo de séries
+3. Vídeo via `url_launcher` quando houver URL em `lib/data/seed/exercise_media.dart` (mapa vazio — sem inventar)
+4. Guia expandido (divisão semanal, tipos de série, como registrar)
+
 ### Próximo pacote sugerido
 
-1. Biblioteca de exercícios com histórico no detalhe + vídeos (URLs reais)
-2. Guia do protocolo mais completo
-3. iOS (`GoogleService-Info.plist`) + testes de sync com fixtures legadas
-4. Migrar warning Kotlin built-in no Android
+1. iOS (`GoogleService-Info.plist`) + testes de sync com fixtures legadas
+2. Migrar warning Kotlin built-in no Android
+3. Cadastrar URLs reais de vídeo quando disponíveis no PDF/projeto
+4. (Opcional) player embutido em vez de abrir externo

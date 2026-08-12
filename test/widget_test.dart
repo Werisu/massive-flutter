@@ -178,4 +178,77 @@ void main() {
     expect(a, b);
     expect(a, '2026-03-24_plan_monday');
   });
+
+  test('resumo de séries do protocolo para exercício', () {
+    final summary = ProtocolData.setsSummary('ex_triceps_barra_v');
+    expect(summary, contains('Aquecimento'));
+    expect(summary, contains('Valendo'));
+    expect(ProtocolData.firstPrescription('ex_triceps_barra_v'), isNotNull);
+  });
+
+  test('melhor marca e tip por exercício', () {
+    final at = DateTime(2026, 3, 20);
+    final sessions = [
+      WorkoutSession(
+        id: 's1',
+        workoutPlanId: 'plan_monday',
+        startedAt: at,
+        finishedAt: at.add(const Duration(minutes: 30)),
+        exercises: [
+          SessionExercise(
+            workoutExerciseId: 'w1',
+            exerciseId: 'ex_triceps_barra_v',
+            order: 1,
+            sets: [
+              SetRecord(
+                id: 'a',
+                exerciseId: 'ex_triceps_barra_v',
+                setType: SetType.working,
+                setNumber: 1,
+                weight: 30,
+                repetitions: 8,
+                completed: true,
+                completedAt: at,
+              ),
+            ],
+          ),
+        ],
+      ),
+      WorkoutSession(
+        id: 's2',
+        workoutPlanId: 'plan_monday',
+        startedAt: at.add(const Duration(days: 7)),
+        finishedAt: at.add(const Duration(days: 7, minutes: 30)),
+        exercises: [
+          SessionExercise(
+            workoutExerciseId: 'w1',
+            exerciseId: 'ex_triceps_barra_v',
+            order: 1,
+            sets: [
+              SetRecord(
+                id: 'b',
+                exerciseId: 'ex_triceps_barra_v',
+                setType: SetType.working,
+                setNumber: 1,
+                weight: 30,
+                repetitions: 10,
+                completed: true,
+                completedAt: at.add(const Duration(days: 7)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ];
+
+    final best =
+        ProgressAnalytics.bestMarkForExercise(sessions, 'ex_triceps_barra_v');
+    expect(best?.weight, 30);
+    expect(best?.reps, 10);
+
+    final tip =
+        ProgressAnalytics.tipForExercise(sessions, 'ex_triceps_barra_v');
+    expect(tip, isNotNull);
+    expect(tip!.message.toLowerCase(), contains('topo'));
+  });
 }

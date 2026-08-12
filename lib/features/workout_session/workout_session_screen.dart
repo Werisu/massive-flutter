@@ -6,6 +6,7 @@ import '../../core/providers/app_providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/open_url.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../core/widgets/input_widgets.dart';
 import '../../core/widgets/rest_timer.dart';
@@ -551,13 +552,11 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                     SecondaryButton(
                       label: 'Ver vídeo',
                       icon: Icons.play_circle_outline,
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Reprodução de vídeo disponível quando houver URL.'),
-                          ),
-                        );
-                      },
+                      onPressed: () => openExternalUrl(
+                        exercise!.videoUrl!,
+                        context: context,
+                        failureMessage: 'Não foi possível abrir o vídeo.',
+                      ),
                     )
                   else
                     Text(

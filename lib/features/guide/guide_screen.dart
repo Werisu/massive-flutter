@@ -11,6 +11,12 @@ class GuideScreen extends StatelessWidget {
 
   IconData _iconFor(String key) {
     switch (key) {
+      case 'calendar':
+        return Icons.calendar_month_outlined;
+      case 'layers':
+        return Icons.layers_outlined;
+      case 'edit':
+        return Icons.edit_note_outlined;
       case 'fitness_center':
         return Icons.fitness_center;
       case 'trending_up':
