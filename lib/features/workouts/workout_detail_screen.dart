@@ -7,7 +7,9 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../core/widgets/input_widgets.dart';
 import '../../data/models/enums.dart';
+import '../../data/seed/hiit_data.dart';
 import '../../data/seed/protocol_data.dart';
+import '../hiit/hiit_today_card.dart';
 
 class WorkoutDetailScreen extends ConsumerWidget {
   const WorkoutDetailScreen({super.key, required this.planId});
@@ -29,11 +31,17 @@ class WorkoutDetailScreen extends ConsumerWidget {
         title: Text('${plan.weekday.labelPt} — ${plan.name}'),
       ),
       body: plan.isDayOff
-          ? const EmptyState(
-              title: 'DAY OFF',
-              subtitle:
-                  'Dia de recuperação conforme o protocolo. Priorize sono e recuperação.',
-              icon: Icons.hotel_outlined,
+          ? ListView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              children: [
+                Text(
+                  'Recuperação da musculação conforme o protocolo. '
+                  'O HIIT da semana entra neste dia, com as pernas frescas.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                HiitTodayCard(protocol: HiitData.forWeekday(plan.weekday)),
+              ],
             )
           : ListView(
               padding: const EdgeInsets.all(AppSpacing.lg),
@@ -115,6 +123,13 @@ class WorkoutDetailScreen extends ConsumerWidget {
                     ),
                   );
                 }),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  'Depois da musculação',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                HiitTodayCard(protocol: HiitData.forWeekday(plan.weekday)),
                 const SizedBox(height: AppSpacing.xl),
               ],
             ),

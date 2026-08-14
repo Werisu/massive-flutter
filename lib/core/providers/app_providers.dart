@@ -6,12 +6,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/firebase/auth_repository.dart';
 import '../../data/firebase/firestore_sync_repository.dart';
 import '../../data/models/enums.dart';
+import '../../data/models/hiit_protocol.dart';
 import '../../data/models/user_preferences.dart';
 import '../../data/models/user_profile.dart';
 import '../../data/models/workout_plan.dart';
 import '../../data/models/workout_session.dart';
+import '../../data/repositories/hiit_repository.dart';
 import '../../data/repositories/preferences_repository.dart';
 import '../../data/repositories/session_repository.dart';
+import '../../data/seed/hiit_data.dart';
 import '../../data/seed/protocol_data.dart';
 
 final preferencesProvider =
@@ -429,3 +432,22 @@ final allPlansProvider = Provider<List<WorkoutPlan>>((ref) {
 });
 
 final allExercisesProvider = Provider((ref) => ProtocolData.catalog);
+
+final todayHiitProvider = Provider<HiitProtocol>((ref) {
+  return HiitData.forWeekday(Weekday.fromDateTime(DateTime.now()));
+});
+
+final hiitCompletionProvider =
+    StateNotifierProvider<HiitCompletionNotifier, HiitCompletionState>((ref) {
+  return HiitCompletionNotifier(ref.watch(hiitRepositoryProvider));
+});
+
+class HiitCompletionNotifier extends StateNotifier<HiitCompletionState> {
+  HiitCompletionNotifier(this._repo) : super(_repo.get());
+
+  final HiitRepository _repo;
+
+  Future<void> markCompleted(String protocolId) async {
+    state = await _repo.markCompleted(protocolId);
+  }
+}

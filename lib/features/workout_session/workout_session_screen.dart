@@ -14,6 +14,7 @@ import '../../data/models/enums.dart';
 import '../../data/models/workout_plan.dart';
 import '../../data/models/workout_session.dart';
 import '../../data/repositories/session_repository.dart';
+import '../../data/seed/hiit_data.dart';
 import '../../data/seed/protocol_data.dart';
 
 class WorkoutSessionScreen extends ConsumerStatefulWidget {
@@ -272,10 +273,42 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
 
     await ref.read(sessionsProvider.notifier).finish(_session!);
     if (!mounted) return;
-    context.pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Treino salvo no histórico.')),
+
+    final protocol = HiitData.forWeekday(_plan!.weekday);
+    final startHiit = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          protocol.isOptional ? 'Cardio opcional' : 'Cardio de hoje',
+        ),
+        content: Text(
+          '${protocol.name} · ${protocol.totalMinutes} min\n\n'
+          '${protocol.rationale}',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Agora não'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Começar'),
+          ),
+        ],
+      ),
     );
+    if (!mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
+    router.pop();
+    if (startHiit == true) {
+      router.push('/hiit/${protocol.id}');
+    } else {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Treino salvo no histórico.')),
+      );
+    }
   }
 
   Future<void> _onCompletedSetTap(int setIndex) async {

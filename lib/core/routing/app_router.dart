@@ -8,6 +8,7 @@ import '../../features/guide/guide_screen.dart';
 import '../../features/guide/guide_topic_screen.dart';
 import '../../features/history/history_detail_screen.dart';
 import '../../features/history/history_screen.dart';
+import '../../features/hiit/hiit_player_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/progress/progress_screen.dart';
@@ -74,6 +75,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final planId = state.pathParameters['planId']!;
           return WorkoutSessionScreen(planId: planId);
+        },
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/hiit/:protocolId',
+        builder: (context, state) {
+          final id = state.pathParameters['protocolId']!;
+          return HiitPlayerScreen(protocolId: id);
         },
       ),
       GoRoute(

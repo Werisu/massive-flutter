@@ -34,8 +34,9 @@ abstract final class GuideContent {
           '• Sexta — Tríceps e Costas\n'
           '• Sábado — Bíceps, Ombro e Peito\n'
           '• Domingo — Abdômen e Panturrilha\n\n'
-          'A quinta-feira é descanso programado. '
-          'Não invente treinos extras fora dessa estrutura sem orientação.',
+          'A quinta-feira é descanso programado da musculação. '
+          'O app sugere o HIIT de qualidade da semana nesse dia, '
+          'sem alterar as séries do PDF.',
     ),
     GuideTopic(
       id: 'set_types',
@@ -176,6 +177,35 @@ abstract final class GuideContent {
           'O protocolo destaca o uso de strap nas séries valendo de costas '
           'e padrões de levantamento terra.\n\n'
           'Isso é uma orientação educativa do protocolo, não uma obrigação universal.',
+    ),
+    GuideTopic(
+      id: 'hiit',
+      title: 'HIIT e cardio pós-treino',
+      icon: 'speed',
+      body:
+          'O cardio não faz parte do PDF Massive Arms. Ele entra como '
+          'bloco extra, sem mudar séries, exercícios ou a divisão semanal.\n\n'
+          'A regra: não correr forte quando as pernas precisam render na '
+          'musculação. HIIT de corrida na segunda prejudica a terça de '
+          'inferiores; na terça e na quarta as pernas já estão fadigadas.\n\n'
+          'Encaixe da semana:\n\n'
+          '• Segunda — caminhada rápida 15 min (protege a terça)\n'
+          '• Terça — caminhada rápida 15 min (após pernas)\n'
+          '• Quarta — caminhada rápida 15 min (pernas recuperando)\n'
+          '• Quinta — HIIT de qualidade 22 min (Day Off, pernas frescas)\n'
+          '• Sexta — caminhada rápida 15 min (dia após o HIIT)\n'
+          '• Sábado — HIIT curto 15 min (30 s forte / 60 s leve × 6)\n'
+          '• Domingo — caminhada leve 10 min, opcional\n\n'
+          'São no máximo 2 HIIT por semana. Isso aumenta o gasto sem '
+          'transformar todo pós-treino em um segundo treino pesado.\n\n'
+          'A esteira não usa inclinação: só velocidade. O trecho forte '
+          'precisa ser intenso para o seu condicionamento, não um sprint '
+          'máximo. Se as pernas pesarem, troque pela caminhada rápida '
+          '(6,5–7,5 km/h, sem correr). Bike ou elíptico valem com a mesma '
+          'cadência.\n\n'
+          'HIIT não escolhe de onde a gordura sai. Dieta + musculação '
+          'continuam o eixo; o cardio é complemento. Consistência no '
+          'déficit semanal importa mais do que esgotar esses 15 minutos.',
     ),
   ];
 

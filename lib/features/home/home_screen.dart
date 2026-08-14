@@ -13,6 +13,7 @@ import '../../data/models/workout_session.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/seed/protocol_data.dart';
 import '../../data/services/history_grouping.dart';
+import '../hiit/hiit_today_card.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -120,13 +121,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ] else ...[
                     const SizedBox(height: AppSpacing.md),
                     Text(
-                      'Dia de recuperação. Use o tempo para sono, mobilidade e revisão do protocolo.',
+                      'Dia de recuperação da musculação. O HIIT de qualidade da semana entra aqui — pernas frescas, melhor estímulo.',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
                 ],
               ),
             ),
+            const SizedBox(height: AppSpacing.xl),
+            const HiitTodayCard(),
             const SizedBox(height: AppSpacing.xl),
             SectionHeader(
               title: 'Seu último treino',
