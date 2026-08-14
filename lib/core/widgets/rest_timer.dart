@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../services/rest_notification_service.dart';
+import '../services/timer_cue_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../utils/formatters.dart';
@@ -93,6 +94,7 @@ class _RestTimerState extends State<RestTimer> with WidgetsBindingObserver {
     _running = false;
     setState(() => _remaining = Duration.zero);
     RestNotificationService.instance.cancelRest();
+    TimerCueService.instance.play();
     widget.onFinished?.call();
   }
 
