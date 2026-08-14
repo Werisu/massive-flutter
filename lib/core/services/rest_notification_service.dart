@@ -39,6 +39,8 @@ class RestNotificationService {
         'Descanso do treino',
         description: 'Avisa quando o intervalo de descanso termina',
         importance: Importance.high,
+        playSound: true,
+        enableVibration: true,
       ),
     );
 
@@ -62,6 +64,8 @@ class RestNotificationService {
         channelDescription: 'Avisa quando o intervalo de descanso termina',
         importance: Importance.high,
         priority: Priority.high,
+        playSound: true,
+        enableVibration: true,
         category: AndroidNotificationCategory.alarm,
       ),
       iOS: DarwinNotificationDetails(
