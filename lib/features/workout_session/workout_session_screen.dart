@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/providers/app_providers.dart';
+import '../../core/services/keep_alive_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/formatters.dart';
@@ -76,6 +77,9 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
         _exerciseIndex = idx;
         _loading = false;
       });
+      KeepAliveService.instance.setEnabled(
+        ref.read(preferencesProvider).keepAliveEnabled,
+      );
       _prefillCurrentSet();
     } catch (e) {
       setState(() {

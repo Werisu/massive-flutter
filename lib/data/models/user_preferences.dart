@@ -9,6 +9,7 @@ class UserPreferences {
     this.firebaseUid,
     this.cloudSyncEnabled = true,
     this.lastSyncedAt,
+    this.keepAliveEnabled = true,
   });
 
   final String userName;
@@ -20,6 +21,7 @@ class UserPreferences {
   final String? firebaseUid;
   final bool cloudSyncEnabled;
   final DateTime? lastSyncedAt;
+  final bool keepAliveEnabled;
 
   UserPreferences copyWith({
     String? userName,
@@ -31,6 +33,7 @@ class UserPreferences {
     String? firebaseUid,
     bool? cloudSyncEnabled,
     DateTime? lastSyncedAt,
+    bool? keepAliveEnabled,
   }) {
     return UserPreferences(
       userName: userName ?? this.userName,
@@ -42,6 +45,7 @@ class UserPreferences {
       firebaseUid: firebaseUid ?? this.firebaseUid,
       cloudSyncEnabled: cloudSyncEnabled ?? this.cloudSyncEnabled,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      keepAliveEnabled: keepAliveEnabled ?? this.keepAliveEnabled,
     );
   }
 
@@ -55,6 +59,7 @@ class UserPreferences {
         'firebaseUid': firebaseUid,
         'cloudSyncEnabled': cloudSyncEnabled,
         'lastSyncedAt': lastSyncedAt?.toIso8601String(),
+        'keepAliveEnabled': keepAliveEnabled,
       };
 
   factory UserPreferences.fromJson(Map<String, dynamic> json) =>
@@ -70,5 +75,6 @@ class UserPreferences {
         lastSyncedAt: json['lastSyncedAt'] != null
             ? DateTime.tryParse(json['lastSyncedAt'] as String)
             : null,
+        keepAliveEnabled: json['keepAliveEnabled'] as bool? ?? true,
       );
 }

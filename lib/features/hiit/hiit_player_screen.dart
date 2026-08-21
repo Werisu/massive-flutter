@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/providers/app_providers.dart';
+import '../../core/services/keep_alive_service.dart';
 import '../../core/services/rest_notification_service.dart';
 import '../../core/services/timer_cue_service.dart';
 import '../../core/theme/app_colors.dart';
@@ -79,6 +80,9 @@ class _HiitPlayerScreenState extends ConsumerState<HiitPlayerScreen>
       _index = 0;
       _completed = false;
     });
+    await KeepAliveService.instance.setEnabled(
+      ref.read(preferencesProvider).keepAliveEnabled,
+    );
     await _enterSegment(0);
   }
 

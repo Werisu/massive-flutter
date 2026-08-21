@@ -43,6 +43,12 @@ class PreferencesNotifier extends StateNotifier<UserPreferences> {
     state = next;
   }
 
+  Future<void> updateKeepAlive(bool enabled) async {
+    final next = state.copyWith(keepAliveEnabled: enabled);
+    await _repo.save(next);
+    state = next;
+  }
+
   Future<void> applyProfile(UserProfile profile) async {
     final next = profile.toPreferences(state).copyWith(
           lastSyncedAt: DateTime.now(),
@@ -78,6 +84,7 @@ class PreferencesNotifier extends StateNotifier<UserPreferences> {
       firebaseUid: null,
       cloudSyncEnabled: state.cloudSyncEnabled,
       lastSyncedAt: null,
+      keepAliveEnabled: state.keepAliveEnabled,
     );
     await _repo.save(cleared);
     state = cleared;
