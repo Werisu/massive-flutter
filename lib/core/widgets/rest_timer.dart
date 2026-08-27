@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../services/rest_notification_service.dart';
+import '../services/rest_overlay_service.dart';
+import '../services/screen_wake_service.dart';
 import '../services/timer_cue_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
@@ -33,6 +35,7 @@ class _RestTimerState extends State<RestTimer> with WidgetsBindingObserver {
   Timer? _timer;
   bool _running = false;
   DateTime? _endsAt;
+  AppLifecycleState _lifecycle = AppLifecycleState.resumed;
 
   @override
   void initState() {
@@ -40,6 +43,10 @@ class _RestTimerState extends State<RestTimer> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _total = widget.initialDuration;
     _remaining = widget.initialDuration;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      RestOverlayService.instance.promptIfNeeded(context);
+    });
     _start();
   }
 
@@ -47,13 +54,24 @@ class _RestTimerState extends State<RestTimer> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
+    ScreenWakeService.instance.setEnabled(false);
+    RestOverlayService.instance.hide();
     RestNotificationService.instance.cancelRest();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _endsAt != null && _running) {
+    _lifecycle = state;
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      _syncExternalTimer();
+      return;
+    }
+    if (state != AppLifecycleState.resumed) return;
+
+    RestOverlayService.instance.hide();
+    if (_endsAt != null && _running) {
       final left = _endsAt!.difference(DateTime.now());
       if (left <= Duration.zero) {
         _finish();
@@ -61,6 +79,15 @@ class _RestTimerState extends State<RestTimer> with WidgetsBindingObserver {
         setState(() => _remaining = left);
       }
     }
+  }
+
+  bool get _isAway =>
+      _lifecycle == AppLifecycleState.paused ||
+      _lifecycle == AppLifecycleState.hidden;
+
+  void _syncExternalTimer() {
+    if (!_isAway || !_running || _endsAt == null) return;
+    RestOverlayService.instance.show(endsAt: _endsAt!);
   }
 
   Future<void> _scheduleNotification() async {
@@ -75,7 +102,9 @@ class _RestTimerState extends State<RestTimer> with WidgetsBindingObserver {
     _timer?.cancel();
     _running = true;
     _endsAt = DateTime.now().add(_remaining);
+    ScreenWakeService.instance.setEnabled(true);
     _scheduleNotification();
+    _syncExternalTimer();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!_running) return;
       if (_endsAt != null) {
@@ -92,8 +121,12 @@ class _RestTimerState extends State<RestTimer> with WidgetsBindingObserver {
   void _finish() {
     _timer?.cancel();
     _running = false;
+    ScreenWakeService.instance.setEnabled(false);
     setState(() => _remaining = Duration.zero);
-    RestNotificationService.instance.cancelRest();
+    RestOverlayService.instance.hide();
+    if (!_isAway) {
+      RestNotificationService.instance.cancelRest();
+    }
     TimerCueService.instance.play();
     widget.onFinished?.call();
   }
@@ -103,6 +136,8 @@ class _RestTimerState extends State<RestTimer> with WidgetsBindingObserver {
       if (_running) {
         _running = false;
         _timer?.cancel();
+        ScreenWakeService.instance.setEnabled(false);
+        RestOverlayService.instance.hide();
         RestNotificationService.instance.cancelRest();
       } else {
         _start();
@@ -125,11 +160,14 @@ class _RestTimerState extends State<RestTimer> with WidgetsBindingObserver {
       if (_running) {
         _endsAt = DateTime.now().add(_remaining);
         _scheduleNotification();
+        _syncExternalTimer();
       }
     });
   }
 
   Future<void> _skip() async {
+    await ScreenWakeService.instance.setEnabled(false);
+    await RestOverlayService.instance.hide();
     await RestNotificationService.instance.cancelRest();
     widget.onSkip?.call();
   }
@@ -152,7 +190,9 @@ class _RestTimerState extends State<RestTimer> with WidgetsBindingObserver {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Notificação ao terminar (mesmo fora do app)',
+            RestOverlayService.instance.isSupported
+                ? 'A tela permanece ligada. Ao sair do app, o cronômetro fica flutuante.'
+                : 'A tela permanece ligada. Notificação ao terminar (mesmo fora do app).',
             style: Theme.of(context).textTheme.bodySmall,
             textAlign: TextAlign.center,
           ),

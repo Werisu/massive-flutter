@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/providers/app_providers.dart';
 import '../../core/services/keep_alive_service.dart';
 import '../../core/services/rest_notification_service.dart';
+import '../../core/services/screen_wake_service.dart';
 import '../../core/services/timer_cue_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -48,6 +49,7 @@ class _HiitPlayerScreenState extends ConsumerState<HiitPlayerScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
+    ScreenWakeService.instance.setEnabled(false);
     RestNotificationService.instance.cancelRest();
     super.dispose();
   }
@@ -100,6 +102,7 @@ class _HiitPlayerScreenState extends ConsumerState<HiitPlayerScreen>
       _remaining = segment.duration;
       _running = true;
     });
+    ScreenWakeService.instance.setEnabled(true);
     _endsAt = DateTime.now().add(segment.duration);
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -147,10 +150,12 @@ class _HiitPlayerScreenState extends ConsumerState<HiitPlayerScreen>
       if (_running) {
         _running = false;
         _timer?.cancel();
+        ScreenWakeService.instance.setEnabled(false);
         RestNotificationService.instance.cancelRest();
       } else {
         _endsAt = DateTime.now().add(_remaining);
         _running = true;
+        ScreenWakeService.instance.setEnabled(true);
         _timer = Timer.periodic(const Duration(seconds: 1), (_) {
           if (!_running || _endsAt == null) return;
           final left = _endsAt!.difference(DateTime.now());
@@ -187,6 +192,7 @@ class _HiitPlayerScreenState extends ConsumerState<HiitPlayerScreen>
       _completed = true;
       _advancing = false;
     });
+    ScreenWakeService.instance.setEnabled(false);
   }
 
   Future<void> _confirmLeave() async {

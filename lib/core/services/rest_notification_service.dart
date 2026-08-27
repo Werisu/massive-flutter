@@ -11,7 +11,9 @@ class RestNotificationService {
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _ready = false;
   static const _channelId = 'rest_timer';
+  static const _countdownChannelId = 'rest_timer_live';
   static const _notifId = 4201;
+  static const _countdownId = 4202;
 
   Future<void> init() async {
     if (kIsWeb) return;
@@ -43,6 +45,17 @@ class RestNotificationService {
         enableVibration: true,
       ),
     );
+    await androidPlugin?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        _countdownChannelId,
+        'Cronômetro de descanso',
+        description: 'Mostra o tempo restante do intervalo fora do app',
+        importance: Importance.low,
+        playSound: false,
+        enableVibration: false,
+        showBadge: false,
+      ),
+    );
 
     _ready = true;
   }
@@ -54,7 +67,7 @@ class RestNotificationService {
   }) async {
     if (kIsWeb) return;
     await init();
-    await cancelRest();
+    await _plugin.cancel(id: _notifId);
 
     final when = tz.TZDateTime.now(tz.local).add(after);
     const details = NotificationDetails(
@@ -100,9 +113,53 @@ class RestNotificationService {
     }
   }
 
+  Future<void> showRestCountdown({required DateTime endsAt}) async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    await init();
+    if (endsAt.isBefore(DateTime.now())) return;
+
+    try {
+      await _plugin.show(
+        id: _countdownId,
+        title: 'Descanso',
+        body: 'Tempo restante',
+        notificationDetails: NotificationDetails(
+          android: AndroidNotificationDetails(
+            _countdownChannelId,
+            'Cronômetro de descanso',
+            channelDescription:
+                'Mostra o tempo restante do intervalo fora do app',
+            importance: Importance.low,
+            priority: Priority.low,
+            ongoing: true,
+            autoCancel: false,
+            onlyAlertOnce: true,
+            silent: true,
+            playSound: false,
+            enableVibration: false,
+            usesChronometer: true,
+            chronometerCountDown: true,
+            when: endsAt.millisecondsSinceEpoch,
+            showWhen: true,
+            category: AndroidNotificationCategory.progress,
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Countdown de descanso indisponível: $e');
+    }
+  }
+
+  Future<void> cancelCountdown() async {
+    if (kIsWeb) return;
+    if (!_ready) return;
+    await _plugin.cancel(id: _countdownId);
+  }
+
   Future<void> cancelRest() async {
     if (kIsWeb) return;
     if (!_ready) return;
     await _plugin.cancel(id: _notifId);
+    await _plugin.cancel(id: _countdownId);
   }
 }
