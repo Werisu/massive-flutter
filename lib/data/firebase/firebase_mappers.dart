@@ -73,10 +73,10 @@ abstract final class FirebaseMappers {
     }
     if (name != null && name.isNotEmpty) {
       final lower = name.toLowerCase();
-      for (final e in ProtocolData.exercises) {
+      for (final e in ProtocolData.catalog) {
         if (e.name.toLowerCase() == lower) return e.id;
       }
-      for (final e in ProtocolData.exercises) {
+      for (final e in ProtocolData.catalog) {
         if (e.name.toLowerCase().contains(lower) ||
             lower.contains(e.name.toLowerCase())) {
           return e.id;

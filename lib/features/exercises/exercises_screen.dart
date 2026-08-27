@@ -13,6 +13,7 @@ import '../../data/models/exercise.dart';
 import '../../data/models/workout_session.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/seed/protocol_data.dart';
+import '../../data/seed/exercise_substitutions.dart';
 
 class ExercisesScreen extends ConsumerStatefulWidget {
   const ExercisesScreen({super.key});
@@ -169,7 +170,22 @@ class ExerciseCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          MuscleGroupChip(group: exercise.muscleGroup),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.xs,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              MuscleGroupChip(group: exercise.muscleGroup),
+              if (ExerciseSubstitutions.isAlternative(exercise.id))
+                Text(
+                  'Variação',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.primaryLight,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+            ],
+          ),
           if (summary != null) ...[
             const SizedBox(height: AppSpacing.sm),
             Text(

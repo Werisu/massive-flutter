@@ -150,6 +150,21 @@ abstract final class AppTheme {
         color: AppColors.primary,
         linearTrackColor: AppColors.surfaceElevated,
       ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.textPrimary;
+          }
+          return AppColors.textMuted;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.primary;
+          }
+          return AppColors.surfaceElevated;
+        }),
+        trackOutlineColor: WidgetStateProperty.all(AppColors.surfaceBorder),
+      ),
       snackBarTheme: SnackBarThemeData(
         backgroundColor: AppColors.surfaceElevated,
         contentTextStyle: const TextStyle(color: AppColors.textPrimary),

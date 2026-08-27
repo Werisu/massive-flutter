@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/providers/app_providers.dart';
+import '../../core/services/keep_alive_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/common_widgets.dart';
@@ -19,6 +20,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   late final TextEditingController _nameCtrl;
   bool _syncing = false;
   bool _signingIn = false;
+  bool? _batteryUnrestricted;
 
   @override
   void initState() {
@@ -26,6 +28,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _nameCtrl = TextEditingController(
       text: ref.read(preferencesProvider).userName,
     );
+    _refreshBatteryStatus();
+  }
+
+  Future<void> _refreshBatteryStatus() async {
+    final unrestricted =
+        await KeepAliveService.instance.isBackgroundUnrestricted();
+    if (mounted) setState(() => _batteryUnrestricted = unrestricted);
   }
 
   @override
@@ -307,6 +316,50 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         .updateRest(working: v.round());
                   },
                 ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Segundo plano',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Manter em execução'),
+                  subtitle: const Text(
+                    'Cronômetro, HIIT e alertas continuam com a tela '
+                    'bloqueada ou outro app aberto. No Android aparece '
+                    'uma notificação permanente.',
+                  ),
+                  value: prefs.keepAliveEnabled,
+                  onChanged: (value) async {
+                    await ref
+                        .read(preferencesProvider.notifier)
+                        .updateKeepAlive(value);
+                    if (value) {
+                      await KeepAliveService.instance
+                          .requestBackgroundUnrestricted();
+                      await _refreshBatteryStatus();
+                    }
+                  },
+                ),
+                if (prefs.keepAliveEnabled && _batteryUnrestricted == false) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  SecondaryButton(
+                    label: 'Permitir sem restrição de bateria',
+                    icon: Icons.battery_charging_full,
+                    onPressed: () async {
+                      await KeepAliveService.instance
+                          .requestBackgroundUnrestricted();
+                      await _refreshBatteryStatus();
+                    },
+                  ),
+                ],
               ],
             ),
           ),

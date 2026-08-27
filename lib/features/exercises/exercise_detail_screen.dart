@@ -14,6 +14,7 @@ import '../../core/widgets/input_widgets.dart';
 import '../../data/models/enums.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/seed/protocol_data.dart';
+import '../../data/seed/exercise_substitutions.dart';
 import '../../data/services/progress_analytics.dart';
 
 class ExerciseDetailScreen extends ConsumerWidget {
@@ -54,6 +55,16 @@ class ExerciseDetailScreen extends ConsumerWidget {
           Row(
             children: [
               MuscleGroupChip(group: exercise.muscleGroup),
+              if (ExerciseSubstitutions.isAlternative(exercise.id)) ...[
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  'Variação',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.primaryLight,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
               const Spacer(),
               if (last != null)
                 Text(

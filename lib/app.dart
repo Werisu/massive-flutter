@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/providers/app_providers.dart';
 import 'core/routing/app_router.dart';
+import 'core/services/keep_alive_service.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_spacing.dart';
 import 'core/theme/app_theme.dart';
@@ -23,11 +24,22 @@ class _MassiveAppState extends ConsumerState<MassiveApp> {
     Future<void>.delayed(const Duration(milliseconds: 1100), () {
       if (mounted) setState(() => _showSplash = false);
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      KeepAliveService.instance.setEnabled(
+        ref.read(preferencesProvider).keepAliveEnabled,
+      );
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     ref.watch(autoSyncBootstrapProvider);
+    ref.listen<bool>(
+      preferencesProvider.select((p) => p.keepAliveEnabled),
+      (previous, next) {
+        KeepAliveService.instance.setEnabled(next);
+      },
+    );
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(

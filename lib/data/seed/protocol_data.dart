@@ -2,6 +2,7 @@ import '../models/enums.dart';
 import '../models/exercise.dart';
 import '../models/workout_plan.dart';
 import 'exercise_media.dart';
+import 'exercise_substitutions.dart';
 
 /// Protocol data from "Massive Arms and Shoulders" as documented in instruction.md.
 /// Do not invent exercises or alter set/rep structure.
@@ -21,9 +22,11 @@ abstract final class ProtocolData {
     );
   }
 
-  /// Exercícios do protocolo com mídia cadastrada (quando houver).
+  /// Exercícios do protocolo + variações disponíveis para substituição.
   static List<Exercise> get catalog =>
-      exercises.map(_withMedia).toList(growable: false);
+      [...exercises, ...ExerciseSubstitutions.alternatives]
+          .map(_withMedia)
+          .toList(growable: false);
   static List<SetPrescription> _expand({
     int warmupSets = 0,
     int warmupReps = 10,
@@ -119,7 +122,49 @@ abstract final class ProtocolData {
     for (final e in exercises) {
       if (e.id == id) return _withMedia(e);
     }
+    for (final e in ExerciseSubstitutions.alternatives) {
+      if (e.id == id) return _withMedia(e);
+    }
     return null;
+  }
+
+  static WorkoutExercise? slotById(String workoutExerciseId) {
+    for (final plan in plans) {
+      for (final we in plan.exercises) {
+        if (we.id == workoutExerciseId) return we;
+      }
+    }
+    return null;
+  }
+
+  /// Substitutos sugeridos primeiro, depois o mesmo grupo muscular.
+  static List<Exercise> substitutesFor({
+    required String protocolExerciseId,
+    required String currentExerciseId,
+  }) {
+    final protocol = exerciseById(protocolExerciseId);
+    if (protocol == null) return const [];
+
+    final seen = <String>{currentExerciseId};
+    final ordered = <Exercise>[];
+
+    void add(Exercise? exercise) {
+      if (exercise == null) return;
+      if (!seen.add(exercise.id)) return;
+      ordered.add(exercise);
+    }
+
+    for (final id in ExerciseSubstitutions
+            .suggestedByExerciseId[protocolExerciseId] ??
+        const <String>[]) {
+      add(exerciseById(id));
+    }
+
+    for (final exercise in catalog) {
+      if (exercise.muscleGroup == protocol.muscleGroup) add(exercise);
+    }
+
+    return ordered;
   }
 
   /// Primeira ocorrência do exercício em um plano (prescrição do protocolo).
