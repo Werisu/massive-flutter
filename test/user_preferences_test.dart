@@ -21,4 +21,13 @@ void main() {
     });
     expect(prefs.keepAliveEnabled, isTrue);
   });
+
+  test('substituições de exercício sobrevivem ao JSON', () {
+    const prefs = UserPreferences(
+      userName: 'Atleta',
+      exerciseSubstitutions: {'wed_1': 'alt_martelo_polia'},
+    );
+    final encoded = UserPreferences.fromJson(prefs.toJson());
+    expect(encoded.exerciseSubstitutions['wed_1'], 'alt_martelo_polia');
+  });
 }

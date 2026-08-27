@@ -33,7 +33,7 @@ class ProgressScreen extends ConsumerWidget {
     final best = ProgressAnalytics.bestMarks(sessions, period: period);
     final weekly = ProgressAnalytics.weeklyVolume(sessions);
     final tips = ProgressAnalytics.progressionTips(sessions);
-    final withHistory = ProtocolData.exercises.where((e) {
+    final withHistory = ProtocolData.catalog.where((e) {
       return ProgressAnalytics.workingPoints(
         sessions,
         exerciseId: e.id,

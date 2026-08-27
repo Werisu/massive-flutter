@@ -174,7 +174,10 @@ class SessionRepository {
     return logs;
   }
 
-  Future<WorkoutSession> startSession(WorkoutPlan plan) async {
+  Future<WorkoutSession> startSession(
+    WorkoutPlan plan, {
+    Map<String, String> substitutions = const {},
+  }) async {
     final existing = getActiveSession();
     if (existing != null && !existing.isFinished) {
       if (existing.workoutPlanId == plan.id) {
@@ -188,15 +191,18 @@ class SessionRepository {
       workoutPlanId: plan.id,
       startedAt: DateTime.now(),
       exercises: plan.exercises.map((we) {
+        final resolved = _resolvedExerciseId(we, substitutions);
+        final substituted = resolved != we.exerciseId;
         return SessionExercise(
           workoutExerciseId: we.id,
-          exerciseId: we.exerciseId,
+          exerciseId: resolved,
+          originalExerciseId: substituted ? we.exerciseId : null,
           order: we.order,
           sets: [
             for (var i = 0; i < we.sets.length; i++)
               SetRecord(
                 id: _uuid.v4(),
-                exerciseId: we.exerciseId,
+                exerciseId: resolved,
                 setType: we.sets[i].type,
                 setNumber: i + 1,
               ),
@@ -216,7 +222,7 @@ class SessionRepository {
 
   Future<WorkoutSession> completeSet({
     required WorkoutSession session,
-    required String exerciseId,
+    required String workoutExerciseId,
     required int setIndex,
     required double? weight,
     required int? repetitions,
@@ -224,7 +230,7 @@ class SessionRepository {
     String? notes,
   }) async {
     final exercises = session.exercises.map((ex) {
-      if (ex.exerciseId != exerciseId) return ex;
+      if (ex.workoutExerciseId != workoutExerciseId) return ex;
       final sets = [...ex.sets];
       final current = sets[setIndex];
       sets[setIndex] = current.copyWith(
@@ -246,11 +252,11 @@ class SessionRepository {
   /// Marca série como não concluída (desfazer), preservando carga/reps digitadas.
   Future<WorkoutSession> uncompleteSet({
     required WorkoutSession session,
-    required String exerciseId,
+    required String workoutExerciseId,
     required int setIndex,
   }) async {
     final exercises = session.exercises.map((ex) {
-      if (ex.exerciseId != exerciseId) return ex;
+      if (ex.workoutExerciseId != workoutExerciseId) return ex;
       final sets = [...ex.sets];
       final current = sets[setIndex];
       sets[setIndex] = current.copyWith(
@@ -268,14 +274,14 @@ class SessionRepository {
   /// Atualiza valores de uma série já concluída.
   Future<WorkoutSession> editSet({
     required WorkoutSession session,
-    required String exerciseId,
+    required String workoutExerciseId,
     required int setIndex,
     required double? weight,
     required int? repetitions,
     required int? rir,
   }) async {
     final exercises = session.exercises.map((ex) {
-      if (ex.exerciseId != exerciseId) return ex;
+      if (ex.workoutExerciseId != workoutExerciseId) return ex;
       final sets = [...ex.sets];
       final current = sets[setIndex];
       sets[setIndex] = current.copyWith(
@@ -292,6 +298,21 @@ class SessionRepository {
     }).toList();
 
     final updated = session.copyWith(exercises: exercises);
+    await _save(updated);
+    return updated;
+  }
+
+  Future<WorkoutSession> replaceExercise({
+    required WorkoutSession session,
+    required String workoutExerciseId,
+    required String newExerciseId,
+    required String protocolExerciseId,
+  }) async {
+    final updated = session.replaceExercise(
+      workoutExerciseId: workoutExerciseId,
+      newExerciseId: newExerciseId,
+      protocolExerciseId: protocolExerciseId,
+    );
     await _save(updated);
     return updated;
   }
@@ -378,6 +399,16 @@ class SessionRepository {
 
   WorkoutPlan? planForSession(WorkoutSession session) {
     return ProtocolData.planById(session.workoutPlanId);
+  }
+
+  String _resolvedExerciseId(
+    WorkoutExercise we,
+    Map<String, String> substitutions,
+  ) {
+    final replacement = substitutions[we.id];
+    if (replacement == null || replacement.isEmpty) return we.exerciseId;
+    if (ProtocolData.exerciseById(replacement) == null) return we.exerciseId;
+    return replacement;
   }
 }
 

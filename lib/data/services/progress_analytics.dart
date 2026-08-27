@@ -229,7 +229,7 @@ abstract final class ProgressAnalytics {
     int limit = 6,
   }) {
     final tips = <ProgressionTip>[];
-    for (final exercise in ProtocolData.exercises) {
+    for (final exercise in ProtocolData.catalog) {
       final points = workingPoints(sessions, exerciseId: exercise.id);
       if (points.length < 2) continue;
 

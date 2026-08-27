@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/providers/app_providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../core/widgets/input_widgets.dart';
 import '../../data/models/enums.dart';
-import '../../data/seed/hiit_data.dart';
 import '../../data/seed/protocol_data.dart';
-import '../hiit/hiit_today_card.dart';
+import '../workout_session/exercise_substitute_sheet.dart';
 
 class WorkoutDetailScreen extends ConsumerWidget {
   const WorkoutDetailScreen({super.key, required this.planId});
@@ -26,33 +26,34 @@ class WorkoutDetailScreen extends ConsumerWidget {
       );
     }
 
+    final prefs = ref.watch(preferencesProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: Text('${plan.weekday.labelPt} — ${plan.name}'),
       ),
       body: plan.isDayOff
-          ? ListView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              children: [
-                Text(
-                  'Recuperação da musculação conforme o protocolo. '
-                  'O HIIT da semana entra neste dia, com as pernas frescas.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                HiitTodayCard(protocol: HiitData.forWeekday(plan.weekday)),
-              ],
+          ? const EmptyState(
+              title: 'DAY OFF',
+              subtitle:
+                  'Dia de recuperação conforme o protocolo. Sono, comida e descanso fazem o músculo crescer.',
+              icon: Icons.hotel_outlined,
             )
           : ListView(
               padding: const EdgeInsets.all(AppSpacing.lg),
               children: [
                 Text(
-                  '${plan.exerciseCount} exercícios · séries conforme protocolo',
+                  '${plan.exerciseCount} exercícios · séries do protocolo. Use a troca se o equipamento não estiver disponível.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 ...plan.exercises.map((we) {
-                  final exercise = ProtocolData.exerciseById(we.exerciseId);
+                  final replacementId = prefs.exerciseSubstitutions[we.id];
+                  final displayId = replacementId ?? we.exerciseId;
+                  final exercise = ProtocolData.exerciseById(displayId);
+                  final original = replacementId == null
+                      ? null
+                      : ProtocolData.exerciseById(we.exerciseId);
                   final warmup = we.sets.where((s) => s.type == SetType.warmup).length;
                   final prep = we.sets.where((s) => s.type == SetType.preparation).length;
                   final working = we.sets.where((s) => s.type == SetType.working).length;
@@ -60,8 +61,6 @@ class WorkoutDetailScreen extends ConsumerWidget {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.md),
                     child: AppCard(
-                      onTap: () =>
-                          context.push('/exercise/${we.exerciseId}'),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -85,10 +84,54 @@ class WorkoutDetailScreen extends ConsumerWidget {
                               ),
                               const SizedBox(width: AppSpacing.md),
                               Expanded(
-                                child: Text(
-                                  exercise?.name ?? we.exerciseId,
-                                  style: Theme.of(context).textTheme.titleLarge,
+                                child: InkWell(
+                                  onTap: () =>
+                                      context.push('/exercise/$displayId'),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        exercise?.name ?? displayId,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleLarge,
+                                      ),
+                                      if (original != null)
+                                        Text(
+                                          'No lugar de ${original.name}',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: AppColors.textSecondary,
+                                              ),
+                                        ),
+                                    ],
+                                  ),
                                 ),
+                              ),
+                              IconButton(
+                                tooltip: 'Substituir exercício',
+                                onPressed: () async {
+                                  final pick = await showExerciseSubstituteSheet(
+                                    context: context,
+                                    protocolExerciseId: we.exerciseId,
+                                    currentExerciseId: displayId,
+                                    persistByDefault: true,
+                                    showPersistToggle: false,
+                                  );
+                                  if (pick == null) return;
+                                  await ref
+                                      .read(preferencesProvider.notifier)
+                                      .setExerciseSubstitution(
+                                        workoutExerciseId: we.id,
+                                        replacementExerciseId:
+                                            pick.exerciseId == we.exerciseId
+                                                ? null
+                                                : pick.exerciseId,
+                                      );
+                                },
+                                icon: const Icon(Icons.swap_horiz),
                               ),
                             ],
                           ),
@@ -123,13 +166,6 @@ class WorkoutDetailScreen extends ConsumerWidget {
                     ),
                   );
                 }),
-                const SizedBox(height: AppSpacing.xl),
-                Text(
-                  'Depois da musculação',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                HiitTodayCard(protocol: HiitData.forWeekday(plan.weekday)),
                 const SizedBox(height: AppSpacing.xl),
               ],
             ),

@@ -90,12 +90,19 @@ class SessionExercise {
     required this.exerciseId,
     required this.order,
     required this.sets,
+    this.originalExerciseId,
   });
 
   final String workoutExerciseId;
   final String exerciseId;
   final int order;
   final List<SetRecord> sets;
+
+  /// Exercício do protocolo quando este slot foi substituído.
+  final String? originalExerciseId;
+
+  bool get isSubstituted =>
+      originalExerciseId != null && originalExerciseId != exerciseId;
 
   bool get isCompleted =>
       sets.isNotEmpty && sets.every((s) => s.completed);
@@ -107,12 +114,17 @@ class SessionExercise {
     String? exerciseId,
     int? order,
     List<SetRecord>? sets,
+    String? originalExerciseId,
+    bool clearOriginalExerciseId = false,
   }) {
     return SessionExercise(
       workoutExerciseId: workoutExerciseId ?? this.workoutExerciseId,
       exerciseId: exerciseId ?? this.exerciseId,
       order: order ?? this.order,
       sets: sets ?? this.sets,
+      originalExerciseId: clearOriginalExerciseId
+          ? null
+          : (originalExerciseId ?? this.originalExerciseId),
     );
   }
 
@@ -121,6 +133,7 @@ class SessionExercise {
         'exerciseId': exerciseId,
         'order': order,
         'sets': sets.map((s) => s.toJson()).toList(),
+        'originalExerciseId': originalExerciseId,
       };
 
   factory SessionExercise.fromJson(Map<String, dynamic> json) =>
@@ -131,6 +144,7 @@ class SessionExercise {
         sets: (json['sets'] as List)
             .map((e) => SetRecord.fromJson(e as Map<String, dynamic>))
             .toList(),
+        originalExerciseId: json['originalExerciseId'] as String?,
       );
 }
 
@@ -168,6 +182,33 @@ class WorkoutSession {
   Duration? get duration {
     if (finishedAt == null) return null;
     return finishedAt!.difference(startedAt);
+  }
+
+  WorkoutSession replaceExercise({
+    required String workoutExerciseId,
+    required String newExerciseId,
+    required String protocolExerciseId,
+  }) {
+    return copyWith(
+      exercises: exercises.map((ex) {
+        if (ex.workoutExerciseId != workoutExerciseId) return ex;
+        final substituted = newExerciseId != protocolExerciseId;
+        return ex.copyWith(
+          exerciseId: newExerciseId,
+          originalExerciseId: substituted ? protocolExerciseId : null,
+          clearOriginalExerciseId: !substituted,
+          sets: [
+            for (final set in ex.sets)
+              SetRecord(
+                id: set.id,
+                exerciseId: newExerciseId,
+                setType: set.setType,
+                setNumber: set.setNumber,
+              ),
+          ],
+        );
+      }).toList(),
+    );
   }
 
   WorkoutSession copyWith({

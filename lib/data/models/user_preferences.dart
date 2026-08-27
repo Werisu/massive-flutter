@@ -10,6 +10,7 @@ class UserPreferences {
     this.cloudSyncEnabled = true,
     this.lastSyncedAt,
     this.keepAliveEnabled = true,
+    this.exerciseSubstitutions = const {},
   });
 
   final String userName;
@@ -23,6 +24,9 @@ class UserPreferences {
   final DateTime? lastSyncedAt;
   final bool keepAliveEnabled;
 
+  /// Slot do plano (`WorkoutExercise.id`) → exercício substituto.
+  final Map<String, String> exerciseSubstitutions;
+
   UserPreferences copyWith({
     String? userName,
     int? restMinutesWorking,
@@ -34,6 +38,7 @@ class UserPreferences {
     bool? cloudSyncEnabled,
     DateTime? lastSyncedAt,
     bool? keepAliveEnabled,
+    Map<String, String>? exerciseSubstitutions,
   }) {
     return UserPreferences(
       userName: userName ?? this.userName,
@@ -46,6 +51,8 @@ class UserPreferences {
       cloudSyncEnabled: cloudSyncEnabled ?? this.cloudSyncEnabled,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       keepAliveEnabled: keepAliveEnabled ?? this.keepAliveEnabled,
+      exerciseSubstitutions:
+          exerciseSubstitutions ?? this.exerciseSubstitutions,
     );
   }
 
@@ -60,21 +67,32 @@ class UserPreferences {
         'cloudSyncEnabled': cloudSyncEnabled,
         'lastSyncedAt': lastSyncedAt?.toIso8601String(),
         'keepAliveEnabled': keepAliveEnabled,
+        'exerciseSubstitutions': exerciseSubstitutions,
       };
 
-  factory UserPreferences.fromJson(Map<String, dynamic> json) =>
-      UserPreferences(
-        userName: json['userName'] as String? ?? 'Atleta',
-        restMinutesWorking: json['restMinutesWorking'] as int? ?? 3,
-        restMinutesPrep: json['restMinutesPrep'] as int? ?? 1,
-        weightKg: (json['weightKg'] as num?)?.toDouble(),
-        heightCm: (json['heightCm'] as num?)?.toDouble(),
-        age: json['age'] as int?,
-        firebaseUid: json['firebaseUid'] as String?,
-        cloudSyncEnabled: json['cloudSyncEnabled'] as bool? ?? true,
-        lastSyncedAt: json['lastSyncedAt'] != null
-            ? DateTime.tryParse(json['lastSyncedAt'] as String)
-            : null,
-        keepAliveEnabled: json['keepAliveEnabled'] as bool? ?? true,
-      );
+  factory UserPreferences.fromJson(Map<String, dynamic> json) {
+    final raw = json['exerciseSubstitutions'];
+    final substitutions = <String, String>{};
+    if (raw is Map) {
+      for (final entry in raw.entries) {
+        substitutions['${entry.key}'] = '${entry.value}';
+      }
+    }
+
+    return UserPreferences(
+      userName: json['userName'] as String? ?? 'Atleta',
+      restMinutesWorking: json['restMinutesWorking'] as int? ?? 3,
+      restMinutesPrep: json['restMinutesPrep'] as int? ?? 1,
+      weightKg: (json['weightKg'] as num?)?.toDouble(),
+      heightCm: (json['heightCm'] as num?)?.toDouble(),
+      age: json['age'] as int?,
+      firebaseUid: json['firebaseUid'] as String?,
+      cloudSyncEnabled: json['cloudSyncEnabled'] as bool? ?? true,
+      lastSyncedAt: json['lastSyncedAt'] != null
+          ? DateTime.tryParse(json['lastSyncedAt'] as String)
+          : null,
+      keepAliveEnabled: json['keepAliveEnabled'] as bool? ?? true,
+      exerciseSubstitutions: substitutions,
+    );
+  }
 }

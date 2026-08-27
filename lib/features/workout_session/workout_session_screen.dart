@@ -15,8 +15,8 @@ import '../../data/models/enums.dart';
 import '../../data/models/workout_plan.dart';
 import '../../data/models/workout_session.dart';
 import '../../data/repositories/session_repository.dart';
-import '../../data/seed/hiit_data.dart';
 import '../../data/seed/protocol_data.dart';
+import 'exercise_substitute_sheet.dart';
 
 class WorkoutSessionScreen extends ConsumerStatefulWidget {
   const WorkoutSessionScreen({super.key, required this.planId});
@@ -99,8 +99,17 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
   SessionExercise get _currentExercise =>
       _session!.exercises[_exerciseIndex];
 
+  WorkoutExercise get _currentSlot {
+    return _plan!.exercises.firstWhere(
+      (e) => e.id == _currentExercise.workoutExerciseId,
+      orElse: () => _plan!.exercises[_exerciseIndex],
+    );
+  }
+
+  String get _protocolExerciseId => _currentSlot.exerciseId;
+
   SetPrescription? _prescriptionFor(int setIndex) {
-    final we = _plan!.exercises[_exerciseIndex];
+    final we = _currentSlot;
     if (setIndex >= we.sets.length) return null;
     return we.sets[setIndex];
   }
@@ -193,7 +202,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
 
     final updated = await ref.read(sessionsProvider.notifier).completeSet(
           session: _session!,
-          exerciseId: _currentExercise.exerciseId,
+          workoutExerciseId: _currentExercise.workoutExerciseId,
           setIndex: setIndex,
           weight: weight,
           repetitions: reps,
@@ -277,42 +286,10 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
 
     await ref.read(sessionsProvider.notifier).finish(_session!);
     if (!mounted) return;
-
-    final protocol = HiitData.forWeekday(_plan!.weekday);
-    final startHiit = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          protocol.isOptional ? 'Cardio opcional' : 'Cardio de hoje',
-        ),
-        content: Text(
-          '${protocol.name} · ${protocol.totalMinutes} min\n\n'
-          '${protocol.rationale}',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Agora não'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Começar'),
-          ),
-        ],
-      ),
+    context.pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Treino salvo no histórico.')),
     );
-    if (!mounted) return;
-
-    final messenger = ScaffoldMessenger.of(context);
-    final router = GoRouter.of(context);
-    router.pop();
-    if (startHiit == true) {
-      router.push('/hiit/${protocol.id}');
-    } else {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Treino salvo no histórico.')),
-      );
-    }
   }
 
   Future<void> _onCompletedSetTap(int setIndex) async {
@@ -365,7 +342,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     if (action == 'undo') {
       final updated = await ref.read(sessionsProvider.notifier).uncompleteSet(
             session: _session!,
-            exerciseId: _currentExercise.exerciseId,
+            workoutExerciseId: _currentExercise.workoutExerciseId,
             setIndex: setIndex,
           );
       setState(() {
@@ -456,7 +433,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
 
     final updated = await ref.read(sessionsProvider.notifier).editSet(
           session: _session!,
-          exerciseId: _currentExercise.exerciseId,
+          workoutExerciseId: _currentExercise.workoutExerciseId,
           setIndex: setIndex,
           weight: weight,
           repetitions: reps,
@@ -466,6 +443,71 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Série atualizada.')),
+    );
+  }
+
+  Future<void> _openSubstitute() async {
+    if (_session == null) return;
+
+    if (_currentExercise.completedSets > 0) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Substituir exercício?'),
+          content: const Text(
+            'Este exercício já tem séries registradas. Ao substituir, elas serão desfeitas.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Substituir'),
+            ),
+          ],
+        ),
+      );
+      if (confirm != true) return;
+      if (!mounted) return;
+    }
+
+    final pick = await showExerciseSubstituteSheet(
+      context: context,
+      protocolExerciseId: _protocolExerciseId,
+      currentExerciseId: _currentExercise.exerciseId,
+    );
+    if (pick == null || !mounted) return;
+    if (pick.exerciseId == _currentExercise.exerciseId) return;
+
+    final updated = await ref.read(sessionsProvider.notifier).replaceExercise(
+          session: _session!,
+          workoutExerciseId: _currentExercise.workoutExerciseId,
+          newExerciseId: pick.exerciseId,
+          protocolExerciseId: _protocolExerciseId,
+        );
+
+    if (pick.persist) {
+      await ref.read(preferencesProvider.notifier).setExerciseSubstitution(
+            workoutExerciseId: _currentExercise.workoutExerciseId,
+            replacementExerciseId: pick.exerciseId == _protocolExerciseId
+                ? null
+                : pick.exerciseId,
+          );
+    }
+
+    setState(() {
+      _session = updated;
+      _showRest = false;
+    });
+    _prefillCurrentSet();
+
+    if (!mounted) return;
+    final name = ProtocolData.exerciseById(pick.exerciseId)?.name ??
+        pick.exerciseId;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Trocado para $name.')),
     );
   }
 
@@ -584,22 +626,43 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                     exercise?.name ?? _currentExercise.exerciseId,
                     style: Theme.of(context).textTheme.headlineLarge,
                   ),
-                  const SizedBox(height: AppSpacing.sm),
-                  if (exercise?.hasVideo == true)
-                    SecondaryButton(
-                      label: 'Ver vídeo',
-                      icon: Icons.play_circle_outline,
-                      onPressed: () => openExternalUrl(
-                        exercise!.videoUrl!,
-                        context: context,
-                        failureMessage: 'Não foi possível abrir o vídeo.',
-                      ),
-                    )
-                  else
+                  if (_currentExercise.isSubstituted) ...[
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
-                      'Vídeo indisponível',
-                      style: Theme.of(context).textTheme.bodySmall,
+                      'No lugar de ${ProtocolData.exerciseById(_protocolExerciseId)?.name ?? _protocolExerciseId}',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: AppColors.textSecondary),
                     ),
+                  ],
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      if (exercise?.hasVideo == true) ...[
+                        Expanded(
+                          child: SecondaryButton(
+                            label: 'Ver vídeo',
+                            icon: Icons.play_circle_outline,
+                            onPressed: () => openExternalUrl(
+                              exercise!.videoUrl!,
+                              context: context,
+                              failureMessage:
+                                  'Não foi possível abrir o vídeo.',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                      ],
+                      Expanded(
+                        child: SecondaryButton(
+                          label: 'Substituir',
+                          icon: Icons.swap_horiz,
+                          onPressed: _openSubstitute,
+                        ),
+                      ),
+                    ],
+                  ),
                   if (last != null) ...[
                     const SizedBox(height: AppSpacing.lg),
                     AppCard(

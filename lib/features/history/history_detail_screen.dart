@@ -66,6 +66,13 @@ class HistoryDayDetailScreen extends ConsumerWidget {
                       exercise?.name ?? ex.exerciseId,
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
+                    if (ex.isSubstituted) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        'No lugar de ${ProtocolData.exerciseById(ex.originalExerciseId!)?.name ?? ex.originalExerciseId}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.md),
                     ...ex.sets.map((set) {
                       return Padding(

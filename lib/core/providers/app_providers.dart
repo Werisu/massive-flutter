@@ -49,6 +49,21 @@ class PreferencesNotifier extends StateNotifier<UserPreferences> {
     state = next;
   }
 
+  Future<void> setExerciseSubstitution({
+    required String workoutExerciseId,
+    String? replacementExerciseId,
+  }) async {
+    final nextMap = Map<String, String>.from(state.exerciseSubstitutions);
+    if (replacementExerciseId == null || replacementExerciseId.isEmpty) {
+      nextMap.remove(workoutExerciseId);
+    } else {
+      nextMap[workoutExerciseId] = replacementExerciseId;
+    }
+    final next = state.copyWith(exerciseSubstitutions: nextMap);
+    await _repo.save(next);
+    state = next;
+  }
+
   Future<void> applyProfile(UserProfile profile) async {
     final next = profile.toPreferences(state).copyWith(
           lastSyncedAt: DateTime.now(),
@@ -85,6 +100,7 @@ class PreferencesNotifier extends StateNotifier<UserPreferences> {
       cloudSyncEnabled: state.cloudSyncEnabled,
       lastSyncedAt: null,
       keepAliveEnabled: state.keepAliveEnabled,
+      exerciseSubstitutions: state.exerciseSubstitutions,
     );
     await _repo.save(cleared);
     state = cleared;
@@ -112,14 +128,19 @@ class SessionsNotifier extends StateNotifier<List<WorkoutSession>> {
   WorkoutSession? get lastFinished => _repo.getLastFinishedSession();
 
   Future<WorkoutSession> start(WorkoutPlan plan) async {
-    final session = await _repo.startSession(plan);
+    final substitutions =
+        _ref.read(preferencesProvider).exerciseSubstitutions;
+    final session = await _repo.startSession(
+      plan,
+      substitutions: substitutions,
+    );
     refresh();
     return session;
   }
 
   Future<WorkoutSession> completeSet({
     required WorkoutSession session,
-    required String exerciseId,
+    required String workoutExerciseId,
     required int setIndex,
     required double? weight,
     required int? repetitions,
@@ -127,7 +148,7 @@ class SessionsNotifier extends StateNotifier<List<WorkoutSession>> {
   }) async {
     final updated = await _repo.completeSet(
       session: session,
-      exerciseId: exerciseId,
+      workoutExerciseId: workoutExerciseId,
       setIndex: setIndex,
       weight: weight,
       repetitions: repetitions,
@@ -139,12 +160,12 @@ class SessionsNotifier extends StateNotifier<List<WorkoutSession>> {
 
   Future<WorkoutSession> uncompleteSet({
     required WorkoutSession session,
-    required String exerciseId,
+    required String workoutExerciseId,
     required int setIndex,
   }) async {
     final updated = await _repo.uncompleteSet(
       session: session,
-      exerciseId: exerciseId,
+      workoutExerciseId: workoutExerciseId,
       setIndex: setIndex,
     );
     refresh();
@@ -153,7 +174,7 @@ class SessionsNotifier extends StateNotifier<List<WorkoutSession>> {
 
   Future<WorkoutSession> editSet({
     required WorkoutSession session,
-    required String exerciseId,
+    required String workoutExerciseId,
     required int setIndex,
     required double? weight,
     required int? repetitions,
@@ -161,11 +182,27 @@ class SessionsNotifier extends StateNotifier<List<WorkoutSession>> {
   }) async {
     final updated = await _repo.editSet(
       session: session,
-      exerciseId: exerciseId,
+      workoutExerciseId: workoutExerciseId,
       setIndex: setIndex,
       weight: weight,
       repetitions: repetitions,
       rir: rir,
+    );
+    refresh();
+    return updated;
+  }
+
+  Future<WorkoutSession> replaceExercise({
+    required WorkoutSession session,
+    required String workoutExerciseId,
+    required String newExerciseId,
+    required String protocolExerciseId,
+  }) async {
+    final updated = await _repo.replaceExercise(
+      session: session,
+      workoutExerciseId: workoutExerciseId,
+      newExerciseId: newExerciseId,
+      protocolExerciseId: protocolExerciseId,
     );
     refresh();
     return updated;
@@ -440,7 +477,7 @@ final allPlansProvider = Provider<List<WorkoutPlan>>((ref) {
 
 final allExercisesProvider = Provider((ref) => ProtocolData.catalog);
 
-final todayHiitProvider = Provider<HiitProtocol>((ref) {
+final todayHiitProvider = Provider<HiitProtocol?>((ref) {
   return HiitData.forWeekday(Weekday.fromDateTime(DateTime.now()));
 });
 
