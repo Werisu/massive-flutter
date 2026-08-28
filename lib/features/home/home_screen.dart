@@ -14,7 +14,9 @@ import '../../data/repositories/session_repository.dart';
 import '../../data/seed/protocol_data.dart';
 import '../../data/services/exercise_catalog.dart';
 import '../../data/services/history_grouping.dart';
+import '../../data/services/workout_share_snapshot.dart';
 import '../hiit/hiit_today_card.dart';
+import '../share/workout_share_sheet.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -242,7 +244,37 @@ class _LastWorkoutCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(date, style: Theme.of(context).textTheme.bodySmall),
+          Row(
+            children: [
+              Expanded(
+                child: Text(date, style: Theme.of(context).textTheme.bodySmall),
+              ),
+              if (day != null)
+                IconButton(
+                  tooltip: 'Compartilhar treino',
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 40,
+                    minHeight: 40,
+                  ),
+                  icon: const Icon(Icons.ios_share_rounded, size: 20),
+                  onPressed: () {
+                    showWorkoutShareSheet(
+                      context,
+                      WorkoutShareSnapshot.fromDay(
+                        day: day,
+                        allFinishedSessions: repo.getFinishedSessions(),
+                        athleteName: ref.read(preferencesProvider).userName,
+                        hiitCompleted: ref
+                            .read(hiitCompletionProvider)
+                            .completedOn(day.date),
+                      ),
+                    );
+                  },
+                ),
+            ],
+          ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             plan == null

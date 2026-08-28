@@ -12,6 +12,8 @@ import '../../data/repositories/session_repository.dart';
 import '../../data/seed/protocol_data.dart';
 import '../../data/services/exercise_catalog.dart';
 import '../../data/services/history_grouping.dart';
+import '../../data/services/workout_share_snapshot.dart';
+import '../share/workout_share_sheet.dart';
 
 class HistoryDayDetailScreen extends ConsumerWidget {
   const HistoryDayDetailScreen({super.key, required this.dayId});
@@ -22,6 +24,7 @@ class HistoryDayDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(sessionsProvider);
     ref.watch(preferencesProvider);
+    ref.watch(hiitCompletionProvider);
     final sessions =
         ref.watch(sessionRepositoryProvider).getFinishedSessions();
     final day = HistoryGrouping.findById(sessions, dayId);
@@ -39,7 +42,25 @@ class HistoryDayDetailScreen extends ConsumerWidget {
         : DateFormat('dd/MM/yyyy').format(day.date);
 
     return Scaffold(
-      appBar: AppBar(title: Text(day.title)),
+      appBar: AppBar(
+        title: Text(day.title),
+        actions: [
+          IconButton(
+            tooltip: 'Compartilhar treino',
+            icon: const Icon(Icons.ios_share_rounded),
+            onPressed: () {
+              final snapshot = WorkoutShareSnapshot.fromDay(
+                day: day,
+                allFinishedSessions: sessions,
+                athleteName: ref.read(preferencesProvider).userName,
+                hiitCompleted:
+                    ref.read(hiitCompletionProvider).completedOn(day.date),
+              );
+              showWorkoutShareSheet(context, snapshot);
+            },
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [

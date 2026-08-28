@@ -19,6 +19,7 @@ abstract final class AppColors {
   static const Color warning = Color(0xFFF59E0B);
   static const Color error = Color(0xFFEF4444);
   static const Color info = Color(0xFF3B82F6);
+  static const Color prGold = Color(0xFFFBBF24);
 
   static const Color dayOff = Color(0xFF3F3F46);
   static const Color warmup = Color(0xFF64748B);

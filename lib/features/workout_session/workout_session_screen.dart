@@ -17,6 +17,9 @@ import '../../data/models/workout_session.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/seed/protocol_data.dart';
 import '../../data/services/exercise_catalog.dart';
+import '../../data/services/history_grouping.dart';
+import '../../data/services/workout_share_snapshot.dart';
+import '../share/workout_share_sheet.dart';
 import 'exercise_substitute_sheet.dart';
 
 class WorkoutSessionScreen extends ConsumerStatefulWidget {
@@ -287,10 +290,32 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
 
     await ref.read(sessionsProvider.notifier).finish(_session!);
     if (!mounted) return;
-    context.pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Treino salvo no histórico.')),
+
+    final finished =
+        ref.read(sessionRepositoryProvider).getFinishedSessions();
+    final day = HistoryGrouping.findById(
+      finished,
+      HistoryGrouping.dayKey(_session!.startedAt, _session!.workoutPlanId),
     );
+    if (day != null) {
+      await showWorkoutShareSheet(
+        context,
+        WorkoutShareSnapshot.fromDay(
+          day: day,
+          allFinishedSessions: finished,
+          athleteName: ref.read(preferencesProvider).userName,
+          hiitCompleted:
+              ref.read(hiitCompletionProvider).completedOn(day.date),
+        ),
+        headline: 'Treino concluído',
+      );
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Treino salvo no histórico.')),
+      );
+    }
+    if (!mounted) return;
+    context.pop();
   }
 
   Future<void> _onCompletedSetTap(int setIndex) async {
