@@ -11,7 +11,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../data/repositories/session_repository.dart';
-import '../../data/seed/protocol_data.dart';
+import '../../data/services/exercise_catalog.dart';
 import '../../data/services/progress_analytics.dart';
 
 final progressPeriodProvider =
@@ -23,6 +23,7 @@ class ProgressScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(sessionsProvider);
+    ref.watch(preferencesProvider);
     final repo = ref.watch(sessionRepositoryProvider);
     final sessions = repo.getFinishedSessions();
     final period = ref.watch(progressPeriodProvider);
@@ -33,7 +34,7 @@ class ProgressScreen extends ConsumerWidget {
     final best = ProgressAnalytics.bestMarks(sessions, period: period);
     final weekly = ProgressAnalytics.weeklyVolume(sessions);
     final tips = ProgressAnalytics.progressionTips(sessions);
-    final withHistory = ProtocolData.catalog.where((e) {
+    final withHistory = ExerciseCatalog.all.where((e) {
       return ProgressAnalytics.workingPoints(
         sessions,
         exerciseId: e.id,

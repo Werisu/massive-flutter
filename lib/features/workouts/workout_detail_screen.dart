@@ -9,6 +9,7 @@ import '../../core/widgets/common_widgets.dart';
 import '../../core/widgets/input_widgets.dart';
 import '../../data/models/enums.dart';
 import '../../data/seed/protocol_data.dart';
+import '../../data/services/exercise_catalog.dart';
 import '../workout_session/exercise_substitute_sheet.dart';
 
 class WorkoutDetailScreen extends ConsumerWidget {
@@ -50,10 +51,10 @@ class WorkoutDetailScreen extends ConsumerWidget {
                 ...plan.exercises.map((we) {
                   final replacementId = prefs.exerciseSubstitutions[we.id];
                   final displayId = replacementId ?? we.exerciseId;
-                  final exercise = ProtocolData.exerciseById(displayId);
+                  final exercise = ExerciseCatalog.byId(displayId);
                   final original = replacementId == null
                       ? null
-                      : ProtocolData.exerciseById(we.exerciseId);
+                      : ExerciseCatalog.byId(we.exerciseId);
                   final warmup = we.sets.where((s) => s.type == SetType.warmup).length;
                   final prep = we.sets.where((s) => s.type == SetType.preparation).length;
                   final working = we.sets.where((s) => s.type == SetType.working).length;

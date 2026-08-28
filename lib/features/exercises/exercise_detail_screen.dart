@@ -14,6 +14,7 @@ import '../../core/widgets/input_widgets.dart';
 import '../../data/models/enums.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/seed/protocol_data.dart';
+import '../../data/services/exercise_catalog.dart';
 import '../../data/seed/exercise_substitutions.dart';
 import '../../data/services/progress_analytics.dart';
 
@@ -24,7 +25,8 @@ class ExerciseDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final exercise = ProtocolData.exerciseById(exerciseId);
+    ref.watch(preferencesProvider);
+    final exercise = ExerciseCatalog.byId(exerciseId);
     if (exercise == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Exercício')),
@@ -55,10 +57,11 @@ class ExerciseDetailScreen extends ConsumerWidget {
           Row(
             children: [
               MuscleGroupChip(group: exercise.muscleGroup),
-              if (ExerciseSubstitutions.isAlternative(exercise.id)) ...[
+              if (ExerciseCatalog.isCustom(exercise.id) ||
+                  ExerciseSubstitutions.isAlternative(exercise.id)) ...[
                 const SizedBox(width: AppSpacing.sm),
                 Text(
-                  'Variação',
+                  ExerciseCatalog.isCustom(exercise.id) ? 'Meu' : 'Variação',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: AppColors.primaryLight,
                         fontWeight: FontWeight.w700,

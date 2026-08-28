@@ -1,9 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:massive_arms/data/models/enums.dart';
+import 'package:massive_arms/data/models/exercise.dart';
 import 'package:massive_arms/data/models/user_preferences.dart';
 import 'package:massive_arms/data/models/workout_session.dart';
 import 'package:massive_arms/data/seed/exercise_substitutions.dart';
 import 'package:massive_arms/data/seed/protocol_data.dart';
+import 'package:massive_arms/data/services/exercise_catalog.dart';
 
 void main() {
   test('catálogo inclui martelo na polia como variação', () {
@@ -122,5 +124,33 @@ void main() {
 
     final legacy = UserPreferences.fromJson({'userName': 'Wellysson'});
     expect(legacy.exerciseSubstitutions, isEmpty);
+    expect(legacy.customExercises, isEmpty);
+  });
+
+  test('exercício criado pelo usuário entra no catálogo e nas sugestões', () {
+    const custom = Exercise(
+      id: 'custom_test',
+      name: 'Martelo na Polia Sentado',
+      muscleGroup: MuscleGroup.biceps,
+    );
+    ExerciseCatalog.setCustom([custom]);
+
+    expect(ExerciseCatalog.byId('custom_test')?.name, custom.name);
+    expect(ExerciseCatalog.isCustom('custom_test'), isTrue);
+    expect(ExerciseCatalog.findByName('martelo na polia sentado')?.id, custom.id);
+
+    final candidates = ProtocolData.substitutesFor(
+      protocolExerciseId: 'ex_martelo',
+      currentExerciseId: 'ex_martelo',
+      extra: [custom],
+    );
+    expect(candidates.any((e) => e.id == 'custom_test'), isTrue);
+
+    const prefs = UserPreferences(customExercises: [custom]);
+    final encoded = UserPreferences.fromJson(prefs.toJson());
+    expect(encoded.customExercises.single.id, 'custom_test');
+    expect(encoded.customExercises.single.name, custom.name);
+
+    ExerciseCatalog.setCustom(const []);
   });
 }

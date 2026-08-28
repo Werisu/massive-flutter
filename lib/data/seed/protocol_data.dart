@@ -141,6 +141,7 @@ abstract final class ProtocolData {
   static List<Exercise> substitutesFor({
     required String protocolExerciseId,
     required String currentExerciseId,
+    List<Exercise> extra = const [],
   }) {
     final protocol = exerciseById(protocolExerciseId);
     if (protocol == null) return const [];
@@ -160,7 +161,7 @@ abstract final class ProtocolData {
       add(exerciseById(id));
     }
 
-    for (final exercise in catalog) {
+    for (final exercise in [...catalog, ...extra]) {
       if (exercise.muscleGroup == protocol.muscleGroup) add(exercise);
     }
 

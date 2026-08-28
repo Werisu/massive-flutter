@@ -1,6 +1,6 @@
 import '../models/enums.dart';
 import '../models/workout_session.dart';
-import '../seed/protocol_data.dart';
+import 'exercise_catalog.dart';
 import 'history_grouping.dart';
 
 enum ProgressPeriod {
@@ -173,7 +173,7 @@ abstract final class ProgressAnalytics {
 
     final marks = byExercise.values.map((p) {
       final name =
-          ProtocolData.exerciseById(p.exerciseId)?.name ?? p.exerciseId;
+          ExerciseCatalog.nameOf(p.exerciseId);
       return ExerciseBestMark(
         exerciseId: p.exerciseId,
         exerciseName: name,
@@ -229,7 +229,7 @@ abstract final class ProgressAnalytics {
     int limit = 6,
   }) {
     final tips = <ProgressionTip>[];
-    for (final exercise in ProtocolData.catalog) {
+    for (final exercise in ExerciseCatalog.all) {
       final points = workingPoints(sessions, exerciseId: exercise.id);
       if (points.length < 2) continue;
 
@@ -252,7 +252,7 @@ abstract final class ProgressAnalytics {
     List<WorkoutSession> sessions,
     String exerciseId,
   ) {
-    final exercise = ProtocolData.exerciseById(exerciseId);
+    final exercise = ExerciseCatalog.byId(exerciseId);
     if (exercise == null) return null;
     final points = workingPoints(sessions, exerciseId: exerciseId);
     if (points.length < 2) {
@@ -287,8 +287,7 @@ abstract final class ProgressAnalytics {
     for (final p in points.skip(1)) {
       if (p.volume > best.volume) best = p;
     }
-    final name =
-        ProtocolData.exerciseById(exerciseId)?.name ?? exerciseId;
+    final name = ExerciseCatalog.nameOf(exerciseId);
     return ExerciseBestMark(
       exerciseId: exerciseId,
       exerciseName: name,

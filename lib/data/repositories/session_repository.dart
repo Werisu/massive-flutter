@@ -6,9 +6,11 @@ import 'package:uuid/uuid.dart';
 
 import '../local/hive_boxes.dart';
 import '../models/enums.dart';
+import '../models/exercise.dart';
 import '../models/workout_plan.dart';
 import '../models/workout_session.dart';
 import '../seed/protocol_data.dart';
+import '../services/exercise_catalog.dart';
 
 final sessionRepositoryProvider = Provider<SessionRepository>((ref) {
   return SessionRepository(
@@ -177,6 +179,7 @@ class SessionRepository {
   Future<WorkoutSession> startSession(
     WorkoutPlan plan, {
     Map<String, String> substitutions = const {},
+    List<Exercise> customExercises = const [],
   }) async {
     final existing = getActiveSession();
     if (existing != null && !existing.isFinished) {
@@ -191,7 +194,11 @@ class SessionRepository {
       workoutPlanId: plan.id,
       startedAt: DateTime.now(),
       exercises: plan.exercises.map((we) {
-        final resolved = _resolvedExerciseId(we, substitutions);
+        final resolved = _resolvedExerciseId(
+          we,
+          substitutions,
+          customExercises,
+        );
         final substituted = resolved != we.exerciseId;
         return SessionExercise(
           workoutExerciseId: we.id,
@@ -404,10 +411,12 @@ class SessionRepository {
   String _resolvedExerciseId(
     WorkoutExercise we,
     Map<String, String> substitutions,
+    List<Exercise> customExercises,
   ) {
     final replacement = substitutions[we.id];
     if (replacement == null || replacement.isEmpty) return we.exerciseId;
-    if (ProtocolData.exerciseById(replacement) == null) return we.exerciseId;
+    ExerciseCatalog.setCustom(customExercises);
+    if (ExerciseCatalog.byId(replacement) == null) return we.exerciseId;
     return replacement;
   }
 }

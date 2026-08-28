@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/providers/app_providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../core/widgets/input_widgets.dart';
+import '../../data/models/enums.dart';
 import '../../data/models/exercise.dart';
 import '../../data/seed/exercise_substitutions.dart';
 import '../../data/seed/protocol_data.dart';
+import '../../data/services/exercise_catalog.dart';
 
 class SubstitutionPick {
   const SubstitutionPick({
@@ -29,7 +33,7 @@ Future<SubstitutionPick?> showExerciseSubstituteSheet({
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (context) => _ExerciseSubstituteSheet(
+    builder: (context) => ExerciseSubstituteSheet(
       protocolExerciseId: protocolExerciseId,
       currentExerciseId: currentExerciseId,
       persistByDefault: persistByDefault,
@@ -38,8 +42,9 @@ Future<SubstitutionPick?> showExerciseSubstituteSheet({
   );
 }
 
-class _ExerciseSubstituteSheet extends StatefulWidget {
-  const _ExerciseSubstituteSheet({
+class ExerciseSubstituteSheet extends ConsumerStatefulWidget {
+  const ExerciseSubstituteSheet({
+    super.key,
     required this.protocolExerciseId,
     required this.currentExerciseId,
     required this.persistByDefault,
@@ -52,11 +57,12 @@ class _ExerciseSubstituteSheet extends StatefulWidget {
   final bool showPersistToggle;
 
   @override
-  State<_ExerciseSubstituteSheet> createState() =>
+  ConsumerState<ExerciseSubstituteSheet> createState() =>
       _ExerciseSubstituteSheetState();
 }
 
-class _ExerciseSubstituteSheetState extends State<_ExerciseSubstituteSheet> {
+class _ExerciseSubstituteSheetState
+    extends ConsumerState<ExerciseSubstituteSheet> {
   final _search = TextEditingController();
   late bool _persist;
 
@@ -79,10 +85,94 @@ class _ExerciseSubstituteSheetState extends State<_ExerciseSubstituteSheet> {
     );
   }
 
+  Future<void> _createExercise() async {
+    final protocol = ProtocolData.exerciseById(widget.protocolExerciseId);
+    final nameCtrl = TextEditingController(text: _search.text.trim());
+    var group = protocol?.muscleGroup ?? MuscleGroup.biceps;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModal) {
+            return AlertDialog(
+              title: const Text('Novo exercício'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: nameCtrl,
+                      autofocus: true,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: const InputDecoration(
+                        labelText: 'Nome',
+                        hintText: 'Ex.: Martelo na polia sentado',
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Text(
+                      'Grupo muscular',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      children: MuscleGroup.values
+                          .map(
+                            (g) => MuscleGroupChip(
+                              group: g,
+                              selected: group == g,
+                              onTap: () => setModal(() => group = g),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancelar'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Criar e usar'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    final name = nameCtrl.text.trim();
+    nameCtrl.dispose();
+    if (confirmed != true || !mounted) return;
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Informe o nome do exercício.')),
+      );
+      return;
+    }
+
+    final created = await ref.read(preferencesProvider.notifier).addCustomExercise(
+          name: name,
+          muscleGroup: group,
+        );
+    if (!mounted) return;
+    _pick(created.id);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final prefs = ref.watch(preferencesProvider);
+    ExerciseCatalog.setCustom(prefs.customExercises);
+
     final protocol = ProtocolData.exerciseById(widget.protocolExerciseId);
-    final current = ProtocolData.exerciseById(widget.currentExerciseId);
     final query = _search.text.trim();
     final substituted = widget.currentExerciseId != widget.protocolExerciseId;
 
@@ -90,8 +180,9 @@ class _ExerciseSubstituteSheetState extends State<_ExerciseSubstituteSheet> {
         ? ProtocolData.substitutesFor(
             protocolExerciseId: widget.protocolExerciseId,
             currentExerciseId: widget.currentExerciseId,
+            extra: prefs.customExercises,
           )
-        : ProtocolData.catalog.where((e) {
+        : ExerciseCatalog.all.where((e) {
             if (e.id == widget.currentExerciseId) return false;
             final q = query.toLowerCase();
             return e.name.toLowerCase().contains(q) ||
@@ -125,8 +216,9 @@ class _ExerciseSubstituteSheetState extends State<_ExerciseSubstituteSheet> {
             TextField(
               controller: _search,
               onChanged: (_) => setState(() {}),
+              textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
-                hintText: 'Buscar variação ou exercício',
+                hintText: 'Buscar ou criar um exercício',
                 prefixIcon: Icon(Icons.search),
               ),
             ),
@@ -172,10 +264,18 @@ class _ExerciseSubstituteSheetState extends State<_ExerciseSubstituteSheet> {
             const SizedBox(height: AppSpacing.md),
             Expanded(
               child: candidates.isEmpty
-                  ? const EmptyState(
-                      title: 'Nenhuma variação encontrada',
-                      subtitle: 'Tente outro nome.',
+                  ? EmptyState(
+                      title: query.isEmpty
+                          ? 'Nenhuma variação encontrada'
+                          : 'Nenhum exercício com esse nome',
+                      subtitle: query.isEmpty
+                          ? 'Crie um exercício novo para usar neste treino.'
+                          : 'Crie “$query” e use no lugar do protocolo.',
                       icon: Icons.search_off,
+                      actionLabel: query.isEmpty
+                          ? 'Criar exercício'
+                          : 'Criar “$query”',
+                      onAction: _createExercise,
                     )
                   : ListView.separated(
                       itemCount: candidates.length,
@@ -195,14 +295,18 @@ class _ExerciseSubstituteSheetState extends State<_ExerciseSubstituteSheet> {
                       },
                     ),
             ),
-            if (current != null)
-              Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.sm),
-                child: TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancelar'),
-                ),
-              ),
+            const SizedBox(height: AppSpacing.sm),
+            SecondaryButton(
+              label: query.isEmpty
+                  ? 'Criar exercício'
+                  : 'Criar “$query”',
+              icon: Icons.add,
+              onPressed: _createExercise,
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
           ],
         ),
       ),
@@ -243,9 +347,10 @@ class _SubstituteTile extends StatelessWidget {
                   runSpacing: AppSpacing.xs,
                   children: [
                     MuscleGroupChip(group: exercise.muscleGroup),
-                    if (suggested)
-                      const _HintChip(label: 'Sugerido'),
-                    if (ExerciseSubstitutions.isAlternative(exercise.id))
+                    if (suggested) const _HintChip(label: 'Sugerido'),
+                    if (ExerciseCatalog.isCustom(exercise.id))
+                      const _HintChip(label: 'Meu')
+                    else if (ExerciseSubstitutions.isAlternative(exercise.id))
                       const _HintChip(label: 'Variação'),
                   ],
                 ),

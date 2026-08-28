@@ -10,6 +10,7 @@ import '../../core/widgets/common_widgets.dart';
 import '../../core/widgets/input_widgets.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/seed/protocol_data.dart';
+import '../../data/services/exercise_catalog.dart';
 import '../../data/services/history_grouping.dart';
 
 class HistoryDayDetailScreen extends ConsumerWidget {
@@ -20,6 +21,7 @@ class HistoryDayDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(sessionsProvider);
+    ref.watch(preferencesProvider);
     final sessions =
         ref.watch(sessionRepositoryProvider).getFinishedSessions();
     final day = HistoryGrouping.findById(sessions, dayId);
@@ -55,7 +57,7 @@ class HistoryDayDetailScreen extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           ...day.exercises.map((ex) {
-            final exercise = ProtocolData.exerciseById(ex.exerciseId);
+            final exercise = ExerciseCatalog.byId(ex.exerciseId);
             return Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.lg),
               child: AppCard(
@@ -69,7 +71,7 @@ class HistoryDayDetailScreen extends ConsumerWidget {
                     if (ex.isSubstituted) ...[
                       const SizedBox(height: AppSpacing.xs),
                       Text(
-                        'No lugar de ${ProtocolData.exerciseById(ex.originalExerciseId!)?.name ?? ex.originalExerciseId}',
+                        'No lugar de ${ExerciseCatalog.nameOf(ex.originalExerciseId!)}',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],

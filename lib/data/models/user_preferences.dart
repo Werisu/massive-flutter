@@ -1,3 +1,5 @@
+import 'exercise.dart';
+
 class UserPreferences {
   const UserPreferences({
     this.userName = 'Atleta',
@@ -11,6 +13,7 @@ class UserPreferences {
     this.lastSyncedAt,
     this.keepAliveEnabled = true,
     this.exerciseSubstitutions = const {},
+    this.customExercises = const [],
   });
 
   final String userName;
@@ -27,6 +30,9 @@ class UserPreferences {
   /// Slot do plano (`WorkoutExercise.id`) → exercício substituto.
   final Map<String, String> exerciseSubstitutions;
 
+  /// Exercícios criados pelo usuário para substituição.
+  final List<Exercise> customExercises;
+
   UserPreferences copyWith({
     String? userName,
     int? restMinutesWorking,
@@ -39,6 +45,7 @@ class UserPreferences {
     DateTime? lastSyncedAt,
     bool? keepAliveEnabled,
     Map<String, String>? exerciseSubstitutions,
+    List<Exercise>? customExercises,
   }) {
     return UserPreferences(
       userName: userName ?? this.userName,
@@ -53,6 +60,7 @@ class UserPreferences {
       keepAliveEnabled: keepAliveEnabled ?? this.keepAliveEnabled,
       exerciseSubstitutions:
           exerciseSubstitutions ?? this.exerciseSubstitutions,
+      customExercises: customExercises ?? this.customExercises,
     );
   }
 
@@ -68,6 +76,7 @@ class UserPreferences {
         'lastSyncedAt': lastSyncedAt?.toIso8601String(),
         'keepAliveEnabled': keepAliveEnabled,
         'exerciseSubstitutions': exerciseSubstitutions,
+        'customExercises': customExercises.map((e) => e.toJson()).toList(),
       };
 
   factory UserPreferences.fromJson(Map<String, dynamic> json) {
@@ -76,6 +85,17 @@ class UserPreferences {
     if (raw is Map) {
       for (final entry in raw.entries) {
         substitutions['${entry.key}'] = '${entry.value}';
+      }
+    }
+
+    final custom = <Exercise>[];
+    final rawCustom = json['customExercises'];
+    if (rawCustom is List) {
+      for (final item in rawCustom) {
+        if (item is! Map) continue;
+        try {
+          custom.add(Exercise.fromJson(Map<String, dynamic>.from(item)));
+        } catch (_) {}
       }
     }
 
@@ -93,6 +113,7 @@ class UserPreferences {
           : null,
       keepAliveEnabled: json['keepAliveEnabled'] as bool? ?? true,
       exerciseSubstitutions: substitutions,
+      customExercises: custom,
     );
   }
 }

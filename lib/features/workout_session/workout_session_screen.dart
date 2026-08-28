@@ -16,6 +16,7 @@ import '../../data/models/workout_plan.dart';
 import '../../data/models/workout_session.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/seed/protocol_data.dart';
+import '../../data/services/exercise_catalog.dart';
 import 'exercise_substitute_sheet.dart';
 
 class WorkoutSessionScreen extends ConsumerStatefulWidget {
@@ -504,8 +505,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     _prefillCurrentSet();
 
     if (!mounted) return;
-    final name = ProtocolData.exerciseById(pick.exerciseId)?.name ??
-        pick.exerciseId;
+    final name = ExerciseCatalog.nameOf(pick.exerciseId);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Trocado para $name.')),
     );
@@ -530,8 +530,8 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
       );
     }
 
-    final exercise =
-        ProtocolData.exerciseById(_currentExercise.exerciseId);
+    ref.watch(preferencesProvider);
+    final exercise = ExerciseCatalog.byId(_currentExercise.exerciseId);
     final setIndex = _currentSetIndex;
     final last = ref
         .watch(sessionRepositoryProvider)
@@ -629,7 +629,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                   if (_currentExercise.isSubstituted) ...[
                     const SizedBox(height: AppSpacing.xs),
                     Text(
-                      'No lugar de ${ProtocolData.exerciseById(_protocolExerciseId)?.name ?? _protocolExerciseId}',
+                      'No lugar de ${ExerciseCatalog.nameOf(_protocolExerciseId)}',
                       style: Theme.of(context)
                           .textTheme
                           .bodySmall

@@ -29,5 +29,6 @@ void main() {
     );
     final encoded = UserPreferences.fromJson(prefs.toJson());
     expect(encoded.exerciseSubstitutions['wed_1'], 'alt_martelo_polia');
+    expect(encoded.customExercises, isEmpty);
   });
 }

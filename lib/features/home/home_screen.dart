@@ -12,6 +12,7 @@ import '../../core/widgets/sync_status_card.dart';
 import '../../data/models/workout_session.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/seed/protocol_data.dart';
+import '../../data/services/exercise_catalog.dart';
 import '../../data/services/history_grouping.dart';
 import '../hiit/hiit_today_card.dart';
 
@@ -234,7 +235,7 @@ class _LastWorkoutCard extends ConsumerWidget {
 
     final exerciseName = highlight == null
         ? null
-        : ProtocolData.exerciseById(highlight.exerciseId)?.name;
+        : ExerciseCatalog.nameOf(highlight.exerciseId);
 
     return AppCard(
       onTap: () => context.push('/history/day/$dayId'),

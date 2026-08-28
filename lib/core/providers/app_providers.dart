@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../data/firebase/auth_repository.dart';
 import '../../data/firebase/firestore_sync_repository.dart';
 import '../../data/models/enums.dart';
+import '../../data/models/exercise.dart';
 import '../../data/models/hiit_protocol.dart';
 import '../../data/models/user_preferences.dart';
 import '../../data/models/user_profile.dart';
@@ -16,6 +18,7 @@ import '../../data/repositories/preferences_repository.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/seed/hiit_data.dart';
 import '../../data/seed/protocol_data.dart';
+import '../../data/services/exercise_catalog.dart';
 
 final preferencesProvider =
     StateNotifierProvider<PreferencesNotifier, UserPreferences>((ref) {
@@ -26,6 +29,7 @@ class PreferencesNotifier extends StateNotifier<UserPreferences> {
   PreferencesNotifier(this._repo) : super(_repo.get());
 
   final PreferencesRepository _repo;
+  final _uuid = const Uuid();
 
   Future<void> updateName(String name) async {
     final next =
@@ -62,6 +66,28 @@ class PreferencesNotifier extends StateNotifier<UserPreferences> {
     final next = state.copyWith(exerciseSubstitutions: nextMap);
     await _repo.save(next);
     state = next;
+  }
+
+  Future<Exercise> addCustomExercise({
+    required String name,
+    required MuscleGroup muscleGroup,
+  }) async {
+    final trimmed = name.trim();
+    ExerciseCatalog.setCustom(state.customExercises);
+    final existing = ExerciseCatalog.findByName(trimmed);
+    if (existing != null) return existing;
+
+    final created = Exercise(
+      id: '${ExerciseCatalog.customPrefix}${_uuid.v4()}',
+      name: trimmed,
+      muscleGroup: muscleGroup,
+    );
+    final next = state.copyWith(
+      customExercises: [...state.customExercises, created],
+    );
+    await _repo.save(next);
+    state = next;
+    return created;
   }
 
   Future<void> applyProfile(UserProfile profile) async {
@@ -101,6 +127,7 @@ class PreferencesNotifier extends StateNotifier<UserPreferences> {
       lastSyncedAt: null,
       keepAliveEnabled: state.keepAliveEnabled,
       exerciseSubstitutions: state.exerciseSubstitutions,
+      customExercises: state.customExercises,
     );
     await _repo.save(cleared);
     state = cleared;
@@ -128,11 +155,11 @@ class SessionsNotifier extends StateNotifier<List<WorkoutSession>> {
   WorkoutSession? get lastFinished => _repo.getLastFinishedSession();
 
   Future<WorkoutSession> start(WorkoutPlan plan) async {
-    final substitutions =
-        _ref.read(preferencesProvider).exerciseSubstitutions;
+    final prefs = _ref.read(preferencesProvider);
     final session = await _repo.startSession(
       plan,
-      substitutions: substitutions,
+      substitutions: prefs.exerciseSubstitutions,
+      customExercises: prefs.customExercises,
     );
     refresh();
     return session;
@@ -475,7 +502,10 @@ final allPlansProvider = Provider<List<WorkoutPlan>>((ref) {
   return ProtocolData.plans;
 });
 
-final allExercisesProvider = Provider((ref) => ProtocolData.catalog);
+final allExercisesProvider = Provider((ref) {
+  ref.watch(preferencesProvider);
+  return ExerciseCatalog.all;
+});
 
 final todayHiitProvider = Provider<HiitProtocol?>((ref) {
   return HiitData.forWeekday(Weekday.fromDateTime(DateTime.now()));
