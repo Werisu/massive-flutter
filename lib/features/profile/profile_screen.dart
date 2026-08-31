@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/providers/app_providers.dart';
 import '../../core/services/keep_alive_service.dart';
+import '../../core/services/rest_overlay_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/common_widgets.dart';
@@ -16,11 +17,13 @@ class ProfileScreen extends ConsumerStatefulWidget {
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen>
+    with WidgetsBindingObserver {
   late final TextEditingController _nameCtrl;
   bool _syncing = false;
   bool _signingIn = false;
   bool? _batteryUnrestricted;
+  bool? _overlayAllowed;
 
   @override
   void initState() {
@@ -28,17 +31,34 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     _nameCtrl = TextEditingController(
       text: ref.read(preferencesProvider).userName,
     );
-    _refreshBatteryStatus();
+    _refreshBackgroundStatus();
+    WidgetsBinding.instance.addObserver(this);
   }
 
-  Future<void> _refreshBatteryStatus() async {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshBackgroundStatus();
+    }
+  }
+
+  Future<void> _refreshBackgroundStatus() async {
     final unrestricted =
         await KeepAliveService.instance.isBackgroundUnrestricted();
-    if (mounted) setState(() => _batteryUnrestricted = unrestricted);
+    final overlay = RestOverlayService.instance.isSupported
+        ? await RestOverlayService.instance.hasPermission()
+        : true;
+    if (mounted) {
+      setState(() {
+        _batteryUnrestricted = unrestricted;
+        _overlayAllowed = overlay;
+      });
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _nameCtrl.dispose();
     super.dispose();
   }
@@ -344,7 +364,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     if (value) {
                       await KeepAliveService.instance
                           .requestBackgroundUnrestricted();
-                      await _refreshBatteryStatus();
+                      await _refreshBackgroundStatus();
                     }
                   },
                 ),
@@ -356,7 +376,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     onPressed: () async {
                       await KeepAliveService.instance
                           .requestBackgroundUnrestricted();
-                      await _refreshBatteryStatus();
+                      await _refreshBackgroundStatus();
+                    },
+                  ),
+                ],
+                if (RestOverlayService.instance.isSupported &&
+                    _overlayAllowed == false) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'Cronômetro flutuante',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'Exibe o tempo de descanso sobre outros apps.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  SecondaryButton(
+                    label: 'Permitir sobre outros apps',
+                    icon: Icons.picture_in_picture_alt_outlined,
+                    onPressed: () async {
+                      await RestOverlayService.instance.requestPermission();
+                      await _refreshBackgroundStatus();
                     },
                   ),
                 ],

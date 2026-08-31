@@ -17,8 +17,10 @@ class HiitTodayCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final HiitProtocol prescribed =
-        protocol ?? ref.watch(todayHiitProvider);
+    final prescribed = protocol ?? ref.watch(todayHiitProvider);
+    if (prescribed == null) {
+      return const SizedBox.shrink();
+    }
     final doneToday =
         ref.watch(hiitCompletionProvider).completedOn(DateTime.now());
     final afterLifting = !ref.watch(todayPlanProvider).isDayOff &&

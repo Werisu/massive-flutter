@@ -4,25 +4,14 @@ import 'package:massive_arms/data/models/hiit_protocol.dart';
 import 'package:massive_arms/data/seed/hiit_data.dart';
 
 void main() {
-  test('segunda, terça, quarta e sexta são caminhada rápida', () {
-    for (final day in [
-      Weekday.monday,
-      Weekday.tuesday,
-      Weekday.wednesday,
-      Weekday.friday,
-    ]) {
-      final protocol = HiitData.forWeekday(day);
-      expect(protocol.mode, HiitMode.briskWalk);
-      expect(protocol.totalDuration, const Duration(minutes: 15));
-      expect(
-        protocol.segments.every((s) => !s.hasIncline),
-        isTrue,
-      );
+  test('nenhum dia prescreve cardio em modo hipertrofia', () {
+    for (final day in Weekday.values) {
+      expect(HiitData.forWeekday(day), isNull);
     }
   });
 
-  test('quinta é HIIT de qualidade com 8 tiros de 30 s', () {
-    final protocol = HiitData.forWeekday(Weekday.thursday);
+  test('HIIT de qualidade tem 8 tiros de 30 s', () {
+    final protocol = HiitData.hiitQuality;
     expect(protocol.mode, HiitMode.hiitQuality);
     expect(protocol.workRounds, 8);
     expect(protocol.totalDuration, const Duration(minutes: 22));
@@ -34,18 +23,18 @@ void main() {
     );
   });
 
-  test('sábado é HIIT curto de 15 min com 6 tiros', () {
-    final protocol = HiitData.forWeekday(Weekday.saturday);
+  test('HIIT curto tem 15 min com 6 tiros', () {
+    final protocol = HiitData.hiitShort;
     expect(protocol.mode, HiitMode.hiitShort);
     expect(protocol.workRounds, 6);
     expect(protocol.totalDuration, const Duration(minutes: 15));
   });
 
-  test('domingo é caminhada leve opcional', () {
-    final protocol = HiitData.forWeekday(Weekday.sunday);
-    expect(protocol.mode, HiitMode.easyWalk);
-    expect(protocol.isOptional, isTrue);
-    expect(protocol.totalDuration, const Duration(minutes: 10));
+  test('caminhada rápida e leve existem mas não são prescritas', () {
+    expect(HiitData.briskWalk.mode, HiitMode.briskWalk);
+    expect(HiitData.briskWalk.totalDuration, const Duration(minutes: 15));
+    expect(HiitData.easyWalk.isOptional, isTrue);
+    expect(HiitData.easyWalk.totalDuration, const Duration(minutes: 10));
   });
 
   test('HIIT curto não tem recuperação depois da última corrida', () {

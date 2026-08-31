@@ -3,9 +3,9 @@ import '../models/hiit_protocol.dart';
 
 /// Cardio complementar ao protocolo Massive Arms — não altera séries do PDF.
 ///
-/// Esteira **sem inclinação**: o estímulo vem só da velocidade.
-/// Nos dias em que as pernas precisam render, caminhada rápida (sem correr).
-/// HIIT de corrida só na quinta e no sábado.
+/// Prioridade atual: **hipertrofia**. Nenhum dia prescreve HIIT ou caminhada
+/// após o treino. Os protocolos abaixo ficam disponíveis se o objetivo
+/// voltar a ser gasto calórico (esteira sem inclinação).
 abstract final class HiitData {
   static const briskWalkId = 'brisk_walk_15';
   static const hiitShortId = 'hiit_short_15';
@@ -36,23 +36,8 @@ abstract final class HiitData {
     return null;
   }
 
-  /// Prescrição do dia: protege terça (pernas) e reserva HIIT de qualidade
-  /// para a quinta (Day Off) + um HIIT curto no sábado.
-  static HiitProtocol forWeekday(Weekday day) {
-    switch (day) {
-      case Weekday.thursday:
-        return _hiitQuality;
-      case Weekday.saturday:
-        return _hiitShort;
-      case Weekday.sunday:
-        return _easyWalk;
-      case Weekday.monday:
-      case Weekday.tuesday:
-      case Weekday.wednesday:
-      case Weekday.friday:
-        return _briskWalk;
-    }
-  }
+  /// Nada prescrito: cardio depois do treino atrasa hipertrofia.
+  static HiitProtocol? forWeekday(Weekday _) => null;
 }
 
 const _briskWalk = HiitProtocol(

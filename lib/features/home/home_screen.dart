@@ -15,7 +15,6 @@ import '../../data/seed/protocol_data.dart';
 import '../../data/services/exercise_catalog.dart';
 import '../../data/services/history_grouping.dart';
 import '../../data/services/workout_share_snapshot.dart';
-import '../hiit/hiit_today_card.dart';
 import '../share/workout_share_sheet.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -124,15 +123,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ] else ...[
                     const SizedBox(height: AppSpacing.md),
                     Text(
-                      'Dia de recuperação da musculação. O HIIT de qualidade da semana entra aqui — pernas frescas, melhor estímulo.',
+                      'Dia de recuperação. O músculo cresce fora da academia — priorize sono, comida e descanso.',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
                 ],
               ),
             ),
-            const SizedBox(height: AppSpacing.xl),
-            const HiitTodayCard(),
             const SizedBox(height: AppSpacing.xl),
             SectionHeader(
               title: 'Seu último treino',

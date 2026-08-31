@@ -34,9 +34,9 @@ abstract final class GuideContent {
           '• Sexta — Tríceps e Costas\n'
           '• Sábado — Bíceps, Ombro e Peito\n'
           '• Domingo — Abdômen e Panturrilha\n\n'
-          'A quinta-feira é descanso programado da musculação. '
-          'O app sugere o HIIT de qualidade da semana nesse dia, '
-          'sem alterar as séries do PDF.',
+          'A quinta-feira é descanso programado. '
+          'Não invente treinos extras fora dessa estrutura: o músculo '
+          'cresce na recuperação.',
     ),
     GuideTopic(
       id: 'set_types',
@@ -96,8 +96,10 @@ abstract final class GuideContent {
           '• Séries de aquecimento/preparatórias: aproximadamente 1 minuto.\n'
           '• Séries valendo: 2–5 minutos, conforme exercício e intensidade.\n\n'
           'No app você pode ajustar, pausar, reiniciar ou pular o cronômetro. '
-          'Em Android/iOS o fim do descanso pode disparar notificação mesmo '
-          'fora da tela.',
+          'Enquanto ele estiver rodando no app, a tela permanece ligada. '
+          'No Android, ao sair do app o cronômetro fica flutuante sobre outros '
+          'aplicativos (é preciso permitir "exibir sobre outros apps"). '
+          'Em Android/iOS o fim do descanso também dispara notificação.',
     ),
     GuideTopic(
       id: 'rir',
@@ -183,29 +185,19 @@ abstract final class GuideContent {
       title: 'HIIT e cardio pós-treino',
       icon: 'speed',
       body:
-          'O cardio não faz parte do PDF Massive Arms. Ele entra como '
-          'bloco extra, sem mudar séries, exercícios ou a divisão semanal.\n\n'
-          'A regra: não correr forte quando as pernas precisam render na '
-          'musculação. HIIT de corrida na segunda prejudica a terça de '
-          'inferiores; na terça e na quarta as pernas já estão fadigadas.\n\n'
-          'Encaixe da semana:\n\n'
-          '• Segunda — caminhada rápida 15 min (protege a terça)\n'
-          '• Terça — caminhada rápida 15 min (após pernas)\n'
-          '• Quarta — caminhada rápida 15 min (pernas recuperando)\n'
-          '• Quinta — HIIT de qualidade 22 min (Day Off, pernas frescas)\n'
-          '• Sexta — caminhada rápida 15 min (dia após o HIIT)\n'
-          '• Sábado — HIIT curto 15 min (30 s forte / 60 s leve × 6)\n'
-          '• Domingo — caminhada leve 10 min, opcional\n\n'
-          'São no máximo 2 HIIT por semana. Isso aumenta o gasto sem '
-          'transformar todo pós-treino em um segundo treino pesado.\n\n'
-          'A esteira não usa inclinação: só velocidade. O trecho forte '
-          'precisa ser intenso para o seu condicionamento, não um sprint '
-          'máximo. Se as pernas pesarem, troque pela caminhada rápida '
-          '(6,5–7,5 km/h, sem correr). Bike ou elíptico valem com a mesma '
-          'cadência.\n\n'
-          'HIIT não escolhe de onde a gordura sai. Dieta + musculação '
-          'continuam o eixo; o cardio é complemento. Consistência no '
-          'déficit semanal importa mais do que esgotar esses 15 minutos.',
+          'Objetivo atual: hipertrofia. O cardio não faz parte do PDF '
+          'Massive Arms e o app não prescreve HIIT nem caminhada depois '
+          'do treino.\n\n'
+          'HIIT após a musculação não faz o músculo crescer mais rápido. '
+          'Ele gasta glicogênio, soma fadiga e piora a terça de pernas se '
+          'você correr forte nos dias errados.\n\n'
+          'O que acelera o crescimento, nesta ordem:\n\n'
+          '1. Executar as séries valendo do protocolo (8–10 reps, progressão).\n'
+          '2. Proteína 1,6–2,2 g/kg e calorias suficientes (superávit leve '
+          'cresce mais rápido que déficit).\n'
+          '3. Sono 7–9 horas e a quinta como Day Off de verdade.\n\n'
+          'Se um dia o objetivo voltar a ser emagrecer, o player de esteira '
+          'continua no app — mas não compete com as séries do PDF.',
     ),
   ];
 

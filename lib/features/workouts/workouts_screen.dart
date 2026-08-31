@@ -8,7 +8,6 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../data/models/enums.dart';
 import '../../data/models/workout_plan.dart';
-import '../../data/seed/hiit_data.dart';
 
 class WorkoutsScreen extends ConsumerWidget {
   const WorkoutsScreen({super.key});
@@ -96,11 +95,6 @@ class WorkoutCard extends StatelessWidget {
                 if (!plan.isDayOff)
                   Text(
                     '${plan.exerciseCount} exercícios',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  )
-                else
-                  Text(
-                    HiitData.forWeekday(plan.weekday).shortLabel,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
               ],
