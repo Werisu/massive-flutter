@@ -14,6 +14,11 @@ class UserPreferences {
     this.keepAliveEnabled = true,
     this.exerciseSubstitutions = const {},
     this.customExercises = const [],
+    this.spotifyClientId = '',
+    this.spotifyPlaylistUri = '',
+    this.spotifyPlaylistName = '',
+    this.spotifyAutoplay = true,
+    this.spotifySkipOnSet = true,
   });
 
   final String userName;
@@ -33,6 +38,13 @@ class UserPreferences {
   /// Exercícios criados pelo usuário para substituição.
   final List<Exercise> customExercises;
 
+  /// Client ID do app no Spotify Developer Dashboard (opcional se vier via dart-define).
+  final String spotifyClientId;
+  final String spotifyPlaylistUri;
+  final String spotifyPlaylistName;
+  final bool spotifyAutoplay;
+  final bool spotifySkipOnSet;
+
   UserPreferences copyWith({
     String? userName,
     int? restMinutesWorking,
@@ -46,6 +58,11 @@ class UserPreferences {
     bool? keepAliveEnabled,
     Map<String, String>? exerciseSubstitutions,
     List<Exercise>? customExercises,
+    String? spotifyClientId,
+    String? spotifyPlaylistUri,
+    String? spotifyPlaylistName,
+    bool? spotifyAutoplay,
+    bool? spotifySkipOnSet,
   }) {
     return UserPreferences(
       userName: userName ?? this.userName,
@@ -61,6 +78,11 @@ class UserPreferences {
       exerciseSubstitutions:
           exerciseSubstitutions ?? this.exerciseSubstitutions,
       customExercises: customExercises ?? this.customExercises,
+      spotifyClientId: spotifyClientId ?? this.spotifyClientId,
+      spotifyPlaylistUri: spotifyPlaylistUri ?? this.spotifyPlaylistUri,
+      spotifyPlaylistName: spotifyPlaylistName ?? this.spotifyPlaylistName,
+      spotifyAutoplay: spotifyAutoplay ?? this.spotifyAutoplay,
+      spotifySkipOnSet: spotifySkipOnSet ?? this.spotifySkipOnSet,
     );
   }
 
@@ -77,6 +99,11 @@ class UserPreferences {
         'keepAliveEnabled': keepAliveEnabled,
         'exerciseSubstitutions': exerciseSubstitutions,
         'customExercises': customExercises.map((e) => e.toJson()).toList(),
+        'spotifyClientId': spotifyClientId,
+        'spotifyPlaylistUri': spotifyPlaylistUri,
+        'spotifyPlaylistName': spotifyPlaylistName,
+        'spotifyAutoplay': spotifyAutoplay,
+        'spotifySkipOnSet': spotifySkipOnSet,
       };
 
   factory UserPreferences.fromJson(Map<String, dynamic> json) {
@@ -114,6 +141,11 @@ class UserPreferences {
       keepAliveEnabled: json['keepAliveEnabled'] as bool? ?? true,
       exerciseSubstitutions: substitutions,
       customExercises: custom,
+      spotifyClientId: json['spotifyClientId'] as String? ?? '',
+      spotifyPlaylistUri: json['spotifyPlaylistUri'] as String? ?? '',
+      spotifyPlaylistName: json['spotifyPlaylistName'] as String? ?? '',
+      spotifyAutoplay: json['spotifyAutoplay'] as bool? ?? true,
+      spotifySkipOnSet: json['spotifySkipOnSet'] as bool? ?? true,
     );
   }
 }

@@ -7,6 +7,7 @@ import '../../core/providers/app_providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/fun_copy.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/services/history_grouping.dart';
@@ -25,9 +26,8 @@ class HistoryScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Histórico')),
       body: days.isEmpty
           ? EmptyState(
-              title: 'Seu histórico está vazio',
-              subtitle:
-                  'Finalize um treino ou entre com Google no Perfil para importar da nuvem.',
+              title: FunCopy.emptyHistoryTitle,
+              subtitle: FunCopy.emptyHistorySubtitle,
               icon: Icons.history_toggle_off,
               actionLabel: 'Ver treinos',
               onAction: () => context.go('/workouts'),

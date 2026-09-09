@@ -13,9 +13,13 @@ import '../../core/services/timer_cue_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/fun_copy.dart';
+import '../../core/widgets/celebration_burst.dart';
 import '../../core/widgets/common_widgets.dart';
+import '../../core/services/spotify_pump_service.dart';
 import '../../data/models/hiit_protocol.dart';
 import '../../data/seed/hiit_data.dart';
+import '../spotify/spotify_now_playing_bar.dart';
 
 class HiitPlayerScreen extends ConsumerStatefulWidget {
   const HiitPlayerScreen({super.key, required this.protocolId});
@@ -85,6 +89,7 @@ class _HiitPlayerScreenState extends ConsumerState<HiitPlayerScreen>
     await KeepAliveService.instance.setEnabled(
       ref.read(preferencesProvider).keepAliveEnabled,
     );
+    ref.read(spotifyPumpProvider.notifier).onWorkoutStarted();
     await _enterSegment(0);
   }
 
@@ -97,6 +102,9 @@ class _HiitPlayerScreenState extends ConsumerState<HiitPlayerScreen>
 
     HapticFeedback.mediumImpact();
     final segment = protocol.segments[index];
+    if (segment.kind == HiitSegmentKind.work && index > 0) {
+      ref.read(spotifyPumpProvider.notifier).onHardEffort();
+    }
     setState(() {
       _index = index;
       _remaining = segment.duration;
@@ -193,6 +201,11 @@ class _HiitPlayerScreenState extends ConsumerState<HiitPlayerScreen>
       _advancing = false;
     });
     ScreenWakeService.instance.setEnabled(false);
+    await playCelebration(
+      context,
+      title: 'Cardio carimbado.',
+      subtitle: FunCopy.hiitDoneNote(),
+    );
   }
 
   Future<void> _confirmLeave() async {
@@ -248,14 +261,10 @@ class _HiitPlayerScreenState extends ConsumerState<HiitPlayerScreen>
       return Scaffold(
         appBar: AppBar(title: Text(protocol.name)),
         body: EmptyState(
-          title: 'Cardio concluído',
-          subtitle: protocol.mode == HiitMode.hiitQuality ||
-                  protocol.mode == HiitMode.hiitShort
-              ? 'Dois HIIT bem colocados na semana rendem mais do que '
-                  'correr forte todos os dias.'
-              : 'Gasto extra sem competir com a musculação.',
-          icon: Icons.check_circle_outline,
-          actionLabel: 'Voltar',
+          title: 'Cardio carimbado',
+          subtitle: FunCopy.hiitDoneNote(),
+          icon: Icons.emoji_events_rounded,
+          actionLabel: 'Voltar em paz',
           onAction: () => context.pop(),
         ),
       );
@@ -399,6 +408,8 @@ class _HiitPlayerScreenState extends ConsumerState<HiitPlayerScreen>
                     ),
                   ],
                 ),
+                const SizedBox(height: AppSpacing.md),
+                const SpotifyNowPlayingBar(),
                 const SizedBox(height: AppSpacing.md),
                 Text(
                   protocol.cue,

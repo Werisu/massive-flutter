@@ -176,7 +176,7 @@ class WorkoutDetailScreen extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 child: PrimaryButton(
-                  label: 'Começar treino',
+                  label: 'Bora treinar',
                   icon: Icons.play_arrow_rounded,
                   onPressed: () => context.push('/session/${plan.id}'),
                 ),

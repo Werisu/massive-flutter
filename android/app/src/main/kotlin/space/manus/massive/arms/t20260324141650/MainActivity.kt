@@ -1,6 +1,7 @@
 ﻿package space.manus.massive.arms.t20260324141650
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
@@ -9,6 +10,7 @@ import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.security.MessageDigest
 
 class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -33,6 +35,7 @@ class MainActivity : FlutterActivity() {
                 "requestIgnoreBatteryOptimizations" -> {
                     result.success(requestIgnoreBatteryOptimizations())
                 }
+                "signingSha1" -> result.success(signingSha1())
                 else -> result.notImplemented()
             }
         }
@@ -134,6 +137,28 @@ class MainActivity : FlutterActivity() {
         is Int -> value.toLong()
         is Number -> value.toLong()
         else -> null
+    }
+
+    private fun signingSha1(): String? {
+        return try {
+            val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                packageManager.getPackageInfo(
+                    packageName,
+                    PackageManager.GET_SIGNING_CERTIFICATES,
+                ).signingInfo?.apkContentsSigners
+            } else {
+                @Suppress("DEPRECATION")
+                packageManager.getPackageInfo(
+                    packageName,
+                    PackageManager.GET_SIGNATURES,
+                ).signatures
+            }
+            val sig = signatures?.firstOrNull() ?: return null
+            val digest = MessageDigest.getInstance("SHA-1").digest(sig.toByteArray())
+            digest.joinToString(":") { "%02X".format(it) }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     companion object {

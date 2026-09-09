@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../services/rest_notification_service.dart';
 import '../services/rest_overlay_service.dart';
@@ -9,6 +10,7 @@ import '../services/timer_cue_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../utils/formatters.dart';
+import '../utils/fun_copy.dart';
 import 'common_widgets.dart';
 
 class RestTimer extends StatefulWidget {
@@ -36,6 +38,7 @@ class _RestTimerState extends State<RestTimer> with WidgetsBindingObserver {
   bool _running = false;
   DateTime? _endsAt;
   AppLifecycleState _lifecycle = AppLifecycleState.resumed;
+  late final String _tip;
 
   @override
   void initState() {
@@ -43,6 +46,7 @@ class _RestTimerState extends State<RestTimer> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _total = widget.initialDuration;
     _remaining = widget.initialDuration;
+    _tip = FunCopy.restTip();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       RestOverlayService.instance.promptIfNeeded(context);
@@ -128,6 +132,7 @@ class _RestTimerState extends State<RestTimer> with WidgetsBindingObserver {
       RestNotificationService.instance.cancelRest();
     }
     TimerCueService.instance.play();
+    HapticFeedback.mediumImpact();
     widget.onFinished?.call();
   }
 
@@ -177,22 +182,22 @@ class _RestTimerState extends State<RestTimer> with WidgetsBindingObserver {
     final progress = _total.inSeconds == 0
         ? 0.0
         : 1 - (_remaining.inSeconds / _total.inSeconds);
+    final closingIn = _remaining.inSeconds > 0 && _remaining.inSeconds <= 10;
+    final ringColor = closingIn ? AppColors.warning : AppColors.primary;
 
     return AppCard(
       highlighted: true,
       child: Column(
         children: [
           Text(
-            'Descanso',
+            closingIn ? 'Últimos segundos' : 'Descanso',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColors.primaryLight,
+                  color: closingIn ? AppColors.warning : AppColors.primaryLight,
                 ),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            RestOverlayService.instance.isSupported
-                ? 'A tela permanece ligada. Ao sair do app, o cronômetro fica flutuante.'
-                : 'A tela permanece ligada. Notificação ao terminar (mesmo fora do app).',
+            _tip,
             style: Theme.of(context).textTheme.bodySmall,
             textAlign: TextAlign.center,
           ),
@@ -210,13 +215,14 @@ class _RestTimerState extends State<RestTimer> with WidgetsBindingObserver {
                     value: progress.clamp(0.0, 1.0),
                     strokeWidth: 8,
                     backgroundColor: AppColors.surfaceElevated,
-                    color: AppColors.primary,
+                    color: ringColor,
                   ),
                 ),
                 Text(
                   formatTimer(_remaining),
                   style: Theme.of(context).textTheme.displayMedium?.copyWith(
                         fontFeatures: const [FontFeature.tabularFigures()],
+                        color: closingIn ? AppColors.warning : null,
                       ),
                 ),
               ],
@@ -253,7 +259,7 @@ class _RestTimerState extends State<RestTimer> with WidgetsBindingObserver {
           ),
           const SizedBox(height: AppSpacing.md),
           SecondaryButton(
-            label: 'Pular descanso',
+            label: 'Já descansou? Pular',
             onPressed: _skip,
             icon: Icons.skip_next,
           ),

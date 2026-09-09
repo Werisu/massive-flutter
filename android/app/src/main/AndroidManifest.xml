@@ -68,8 +68,16 @@
             <data android:scheme="http"/>
         </intent>
         <intent>
-            <action android:name="android.intent.action.SEND"/>
-            <data android:mimeType="image/*"/>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="spotify"/>
         </intent>
+        <intent>
+            <action android:name="com.spotify.sso.action.START_AUTH_FLOW"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService"/>
+        </intent>
+        <package android:name="com.spotify.music" />
     </queries>
 </manifest>

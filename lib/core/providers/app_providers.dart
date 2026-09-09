@@ -53,6 +53,24 @@ class PreferencesNotifier extends StateNotifier<UserPreferences> {
     state = next;
   }
 
+  Future<void> updateSpotify({
+    String? clientId,
+    String? playlistUri,
+    String? playlistName,
+    bool? autoplay,
+    bool? skipOnSet,
+  }) async {
+    final next = state.copyWith(
+      spotifyClientId: clientId,
+      spotifyPlaylistUri: playlistUri,
+      spotifyPlaylistName: playlistName,
+      spotifyAutoplay: autoplay,
+      spotifySkipOnSet: skipOnSet,
+    );
+    await _repo.save(next);
+    state = next;
+  }
+
   Future<void> setExerciseSubstitution({
     required String workoutExerciseId,
     String? replacementExerciseId,
@@ -128,6 +146,11 @@ class PreferencesNotifier extends StateNotifier<UserPreferences> {
       keepAliveEnabled: state.keepAliveEnabled,
       exerciseSubstitutions: state.exerciseSubstitutions,
       customExercises: state.customExercises,
+      spotifyClientId: state.spotifyClientId,
+      spotifyPlaylistUri: state.spotifyPlaylistUri,
+      spotifyPlaylistName: state.spotifyPlaylistName,
+      spotifyAutoplay: state.spotifyAutoplay,
+      spotifySkipOnSet: state.spotifySkipOnSet,
     );
     await _repo.save(cleared);
     state = cleared;

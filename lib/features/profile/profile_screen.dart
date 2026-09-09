@@ -9,6 +9,7 @@ import '../../core/services/rest_overlay_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/common_widgets.dart';
+import '../spotify/spotify_settings_card.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -339,6 +340,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
               ],
             ),
           ),
+          const SizedBox(height: AppSpacing.lg),
+          const SpotifySettingsCard(),
           const SizedBox(height: AppSpacing.lg),
           AppCard(
             child: Column(

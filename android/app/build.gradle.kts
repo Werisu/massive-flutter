@@ -24,6 +24,8 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
+        manifestPlaceholders["redirectSchemeName"] = "massivearms"
+        manifestPlaceholders["redirectHostName"] = "callback"
     }
 
     buildTypes {

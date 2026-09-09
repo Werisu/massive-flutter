@@ -66,6 +66,16 @@ class KeepAliveService {
     }
   }
 
+  Future<String?> signingSha1() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return null;
+    try {
+      return await _channel.invokeMethod<String>('signingSha1');
+    } catch (e) {
+      debugPrint('KeepAlive signingSha1: $e');
+      return null;
+    }
+  }
+
   Future<void> _startNative() async {
     if (defaultTargetPlatform != TargetPlatform.android) return;
     try {

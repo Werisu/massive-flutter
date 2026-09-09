@@ -9,6 +9,7 @@ import '../../core/providers/app_providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/fun_copy.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/services/exercise_catalog.dart';
@@ -55,11 +56,10 @@ class ProgressScreen extends ConsumerWidget {
       ),
       body: sessions.isEmpty
           ? EmptyState(
-              title: 'Sem dados de progresso ainda',
-              subtitle:
-                  'Complete treinos para ver volume, melhores marcas e sugestões.',
+              title: FunCopy.emptyProgressTitle,
+              subtitle: FunCopy.emptyProgressSubtitle,
               icon: Icons.show_chart,
-              actionLabel: 'Ir para treinos',
+              actionLabel: 'Ir treinar',
               onAction: () => context.go('/workouts'),
             )
           : ListView(

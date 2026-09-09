@@ -7,6 +7,7 @@ import '../../core/providers/app_providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/fun_copy.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../core/widgets/sync_status_card.dart';
 import '../../data/models/workout_session.dart';
@@ -15,6 +16,7 @@ import '../../data/seed/protocol_data.dart';
 import '../../data/services/exercise_catalog.dart';
 import '../../data/services/history_grouping.dart';
 import '../../data/services/workout_share_snapshot.dart';
+import '../../data/services/workout_streak.dart';
 import '../share/workout_share_sheet.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -42,6 +44,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final last = repo.getLastFinishedSession();
     final active = repo.getActiveSession();
     final greeting = greetingForNow();
+    final streak = WorkoutStreak.current(repo.getFinishedSessions());
+    final streakLabel = FunCopy.streakLabel(streak);
 
     return Scaffold(
       body: SafeArea(
@@ -54,11 +58,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
-              'Massive Arms and Shoulders',
+              FunCopy.tagline(),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: AppColors.primaryLight,
                   ),
             ),
+            if (streakLabel.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.md),
+              _StreakChip(label: streakLabel),
+            ],
             const SizedBox(height: AppSpacing.md),
             const SyncStatusCard(),
             const SizedBox(height: AppSpacing.lg),
@@ -111,7 +119,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               active.workoutPlanId == today.id &&
                               !active.isFinished
                           ? 'Continuar treino'
-                          : 'Começar treino',
+                          : 'Bora treinar',
                       icon: Icons.play_arrow_rounded,
                       onPressed: () => context.push('/session/${today.id}'),
                     ),
@@ -123,7 +131,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ] else ...[
                     const SizedBox(height: AppSpacing.md),
                     Text(
-                      'Dia de recuperação. O músculo cresce fora da academia — priorize sono, comida e descanso.',
+                      FunCopy.dayOffNote(),
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
@@ -140,12 +148,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             if (last == null)
               AppCard(
                 child: EmptyState(
-                  title: 'Pronto para o primeiro treino',
-                  subtitle:
-                      'Comece agora ou entre com Google no Perfil para trazer o histórico da nuvem.',
+                  title: FunCopy.firstWorkoutTitle,
+                  subtitle: FunCopy.firstWorkoutSubtitle,
                   icon: Icons.rocket_launch_outlined,
                   actionLabel:
-                      today.isDayOff ? null : 'Começar primeiro treino',
+                      today.isDayOff ? null : 'Bora pro primeiro treino',
                   onAction: today.isDayOff
                       ? null
                       : () => context.push('/session/${today.id}'),
@@ -196,6 +203,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StreakChip extends StatelessWidget {
+  const _StreakChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.prGold.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+          border: Border.all(color: AppColors.prGold.withValues(alpha: 0.45)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('🔥', style: TextStyle(fontSize: 14)),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppColors.prGold,
+                  ),
             ),
           ],
         ),

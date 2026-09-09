@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,10 +8,13 @@ import '../../core/services/keep_alive_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/fun_copy.dart';
 import '../../core/utils/open_url.dart';
+import '../../core/widgets/celebration_burst.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../core/widgets/input_widgets.dart';
 import '../../core/widgets/rest_timer.dart';
+import '../../core/services/spotify_pump_service.dart';
 import '../../data/models/enums.dart';
 import '../../data/models/workout_plan.dart';
 import '../../data/models/workout_session.dart';
@@ -20,6 +24,7 @@ import '../../data/services/exercise_catalog.dart';
 import '../../data/services/history_grouping.dart';
 import '../../data/services/workout_share_snapshot.dart';
 import '../share/workout_share_sheet.dart';
+import '../spotify/spotify_now_playing_bar.dart';
 import 'exercise_substitute_sheet.dart';
 
 class WorkoutSessionScreen extends ConsumerStatefulWidget {
@@ -85,6 +90,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
         ref.read(preferencesProvider).keepAliveEnabled,
       );
       _prefillCurrentSet();
+      ref.read(spotifyPumpProvider.notifier).onWorkoutStarted();
     } catch (e) {
       setState(() {
         _error = 'Não foi possível iniciar o treino.';
@@ -213,6 +219,21 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
           rir: _rir,
         );
 
+    final setType = updated.exercises[_exerciseIndex].sets[setIndex].setType;
+    final isPr = setType == SetType.working &&
+        previous != null &&
+        previous.weight != null &&
+        weight != null &&
+        (weight > previous.weight! ||
+            (weight == previous.weight &&
+                (previous.repetitions ?? 0) < reps));
+
+    if (isPr) {
+      HapticFeedback.heavyImpact();
+    } else {
+      HapticFeedback.mediumImpact();
+    }
+
     final msg = progressionMessage(
       previousReps: previous?.repetitions,
       currentReps: reps,
@@ -225,17 +246,20 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
       targetRepMax: prescription?.repMax ?? 10,
     );
 
-    if (mounted && (msg.isNotEmpty || suggestion.isNotEmpty)) {
-      final text = [msg, suggestion].where((e) => e.isNotEmpty).join('\n');
+    if (mounted) {
+      final cheer = isPr
+          ? FunCopy.prCheer()
+          : FunCopy.setCheer(isWorking: setType == SetType.working);
+      final extra = [msg, suggestion].where((e) => e.isNotEmpty).join('\n');
+      final text = extra.isEmpty ? cheer : '$cheer\n$extra';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(text),
-          duration: const Duration(seconds: 3),
+          duration: Duration(seconds: isPr ? 4 : 3),
         ),
       );
     }
 
-    final setType = updated.exercises[_exerciseIndex].sets[setIndex].setType;
     final prefs = ref.read(preferencesProvider);
     final rest = setType == SetType.working
         ? Duration(minutes: prefs.restMinutesWorking)
@@ -247,9 +271,8 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
       _restDuration = rest;
     });
 
-    // If exercise done, advance after rest skip/finish
-    if (updated.exercises[_exerciseIndex].isCompleted) {
-      // keep index; advance when rest ends
+    if (setType == SetType.working) {
+      ref.read(spotifyPumpProvider.notifier).onHardEffort();
     }
   }
 
@@ -270,14 +293,14 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Finalizar treino?'),
+        title: const Text('Carimbar este treino?'),
         content: Text(
-          'Séries concluídas: ${_session!.completedSets}/${_session!.totalSets}',
+          'Séries no bolso: ${_session!.completedSets}/${_session!.totalSets}',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
+            child: const Text('Ainda não'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -297,17 +320,31 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
       finished,
       HistoryGrouping.dayKey(_session!.startedAt, _session!.workoutPlanId),
     );
+    WorkoutShareSnapshot? snapshot;
     if (day != null) {
+      snapshot = WorkoutShareSnapshot.fromDay(
+        day: day,
+        allFinishedSessions: finished,
+        athleteName: ref.read(preferencesProvider).userName,
+        hiitCompleted:
+            ref.read(hiitCompletionProvider).completedOn(day.date),
+      );
+    }
+
+    await playCelebration(
+      context,
+      title: FunCopy.finishHeadline(prCount: snapshot?.prCount ?? 0),
+      subtitle: snapshot == null
+          ? null
+          : '${snapshot.exerciseCount} exercícios · ${formatVolumeKg(snapshot.volumeKg)}',
+    );
+    if (!mounted) return;
+
+    if (snapshot != null) {
       await showWorkoutShareSheet(
         context,
-        WorkoutShareSnapshot.fromDay(
-          day: day,
-          allFinishedSessions: finished,
-          athleteName: ref.read(preferencesProvider).userName,
-          hiitCompleted:
-              ref.read(hiitCompletionProvider).completedOn(day.date),
-        ),
-        headline: 'Treino concluído',
+        snapshot,
+        headline: 'Treino concluído — manda pro mural',
       );
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -822,8 +859,8 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                           const SizedBox(height: AppSpacing.md),
                           Text(
                             _session!.exercises.every((e) => e.isCompleted)
-                                ? 'Todas as séries concluídas!'
-                                : 'Exercício concluído',
+                                ? 'Treino limpo. Hora de carimbar.'
+                                : 'Exercício no bolso. Segue o baile.',
                             style: Theme.of(context).textTheme.headlineSmall,
                             textAlign: TextAlign.center,
                           ),
@@ -848,6 +885,15 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                   ],
                 ],
               ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                0,
+                AppSpacing.lg,
+                AppSpacing.sm,
+              ),
+              child: SpotifyNowPlayingBar(),
             ),
           ],
         ),

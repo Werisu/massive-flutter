@@ -76,7 +76,7 @@ String progressionMessage({
   if (previousWeight != null &&
       currentWeight != null &&
       currentWeight > previousWeight) {
-    return 'Carga aumentada em relação ao último treino.';
+    return 'Carga subiu. O ego também.';
   }
 
   if (previousWeight == currentWeight ||
@@ -85,12 +85,12 @@ String progressionMessage({
           previousWeight == currentWeight)) {
     final diff = currentReps - previousReps;
     if (diff > 0) {
-      return 'Boa evolução: +$diff repetição${diff > 1 ? 's' : ''}';
+      return 'Mais uma no tanque: +$diff repetição${diff > 1 ? 's' : ''}';
     }
   }
 
   if (currentReps >= targetRepMax) {
-    return 'Você atingiu o topo da faixa.';
+    return 'Topo da faixa. Próxima: um tiquinho a mais na barra.';
   }
 
   return '';
@@ -101,7 +101,7 @@ String weightSuggestion({
   required int targetRepMax,
 }) {
   if (reps != null && reps >= targetRepMax) {
-    return 'Considere um pequeno aumento de carga no próximo treino.';
+    return 'Topo da faixa. No próximo, um tiquinho a mais na barra.';
   }
   return '';
 }
