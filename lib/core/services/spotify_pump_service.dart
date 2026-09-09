@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:spotify_sdk/models/connection_status.dart';
 import 'package:spotify_sdk/models/player_state.dart';
 import 'package:spotify_sdk/spotify_sdk.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -68,11 +70,18 @@ final spotifyPumpProvider =
   return notifier;
 });
 
-class SpotifyPumpNotifier extends StateNotifier<SpotifyPumpState> {
-  SpotifyPumpNotifier(this._ref) : super(const SpotifyPumpState());
+class SpotifyPumpNotifier extends StateNotifier<SpotifyPumpState>
+    with WidgetsBindingObserver {
+  SpotifyPumpNotifier(this._ref) : super(const SpotifyPumpState()) {
+    WidgetsBinding.instance.addObserver(this);
+    Future<void>.microtask(reconnectSilently);
+  }
+
+  static const _tokenTtl = Duration(minutes: 50);
 
   final Ref _ref;
   StreamSubscription<PlayerState>? _playerSub;
+  StreamSubscription<ConnectionStatus>? _connSub;
   String? _lastTrackUri;
 
   UserPreferences get _prefs => _ref.read(preferencesProvider);
@@ -84,55 +93,140 @@ class SpotifyPumpNotifier extends StateNotifier<SpotifyPumpState> {
 
   void disposeStreams() {
     _playerSub?.cancel();
+    _connSub?.cancel();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     disposeStreams();
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState lifecycle) {
+    if (lifecycle == AppLifecycleState.resumed) {
+      reconnectSilently();
+    }
+  }
+
+  /// Reconecta o App Remote sem abrir a tela de login.
+  Future<void> reconnectSilently() async {
+    if (!spotifyRemoteSupported || !isConfigured) return;
+    if (!_prefs.spotifyLinked) return;
+    if (state.connected || state.connecting) return;
+    await _connectInternal(allowAuth: false, startMix: false);
+  }
+
   Future<void> connect({bool startMix = false}) async {
+    if (state.connected) {
+      if (startMix) await playMix();
+      return;
+    }
+    await _connectInternal(allowAuth: true, startMix: startMix);
+  }
+
+  Future<void> _connectInternal({
+    required bool allowAuth,
+    required bool startMix,
+  }) async {
     if (!spotifyRemoteSupported) {
-      state = state.copyWith(
-        error: 'O controle remoto do Spotify só funciona no celular.',
-      );
+      if (allowAuth) {
+        state = state.copyWith(
+          error: 'O controle remoto do Spotify só funciona no celular.',
+        );
+      }
       return;
     }
     if (!isConfigured) {
-      state = state.copyWith(
-        error: 'Cole o Client ID do Spotify no Perfil para conectar de verdade.',
-      );
+      if (allowAuth) {
+        state = state.copyWith(
+          error: 'Cole o Client ID do Spotify no Perfil para conectar de verdade.',
+        );
+      }
       return;
     }
+    if (state.connecting) return;
 
-    state = state.copyWith(connecting: true, clearError: true);
+    state = state.copyWith(
+      connecting: true,
+      clearError: allowAuth,
+    );
     try {
-      final token = await _authorize();
-      final ok = await SpotifySdk.connectToSpotifyRemote(
-        clientId: clientId,
-        redirectUrl: SpotifyConfig.redirectUrl,
-        accessToken: token,
-      );
-      if (!ok) {
+      String? token = _freshToken;
+      if (allowAuth && !_prefs.spotifyLinked) {
+        token = await _authorize() ?? token;
+      }
+
+      var remoteError = await _tryRemote(token);
+      if (remoteError != null && token != null) {
+        remoteError = await _tryRemote(null);
+      }
+      if (remoteError != null && allowAuth) {
+        token = await _authorize() ?? token;
+        remoteError = await _tryRemote(token);
+      }
+
+      if (remoteError != null) {
         state = state.copyWith(
           connecting: false,
           connected: false,
-          error: 'Não conectou. Confira o app do Spotify e o Client ID.',
+          error: allowAuth ? _friendlyError(remoteError) : state.error,
         );
         return;
       }
+
+      await _listenConnection();
       await _listenPlayer();
-      state = state.copyWith(connecting: false, connected: true, clearError: true);
+      await _markLinked(token: token);
+      state = state.copyWith(
+        connecting: false,
+        connected: true,
+        clearError: true,
+      );
       if (startMix && _savedMix != null) await playMix();
     } catch (e) {
       debugPrint('Spotify connect: $e');
       state = state.copyWith(
         connecting: false,
         connected: false,
-        error: _friendlyError(e),
+        error: allowAuth ? _friendlyError(e) : state.error,
       );
     }
+  }
+
+  /// `null` = conectou.
+  Future<Object?> _tryRemote(String? token) async {
+    try {
+      final ok = await SpotifySdk.connectToSpotifyRemote(
+        clientId: clientId,
+        redirectUrl: SpotifyConfig.redirectUrl,
+        accessToken: token,
+      );
+      if (ok) return null;
+      return 'Não conectou. Confira o app do Spotify e o Client ID.';
+    } catch (e) {
+      debugPrint('Spotify remote: $e');
+      return e;
+    }
+  }
+
+  String? get _freshToken {
+    final token = _prefs.spotifyAccessToken;
+    final at = _prefs.spotifyAccessTokenAt;
+    if (token.isEmpty || at == null) return null;
+    if (DateTime.now().difference(at) > _tokenTtl) return null;
+    return token;
+  }
+
+  Future<void> _markLinked({String? token}) async {
+    await _ref.read(preferencesProvider.notifier).updateSpotify(
+          linked: true,
+          accessToken: token,
+          accessTokenAt: token != null && token.isNotEmpty
+              ? DateTime.now()
+              : null,
+        );
   }
 
   Future<String?> _authorize() async {
@@ -163,10 +257,16 @@ class SpotifyPumpNotifier extends StateNotifier<SpotifyPumpState> {
   Future<void> disconnect() async {
     await _playerSub?.cancel();
     _playerSub = null;
+    await _connSub?.cancel();
+    _connSub = null;
     _lastTrackUri = null;
     try {
       await SpotifySdk.disconnect();
     } catch (_) {}
+    await _ref.read(preferencesProvider.notifier).updateSpotify(
+          linked: false,
+          clearAccessToken: true,
+        );
     state = const SpotifyPumpState();
   }
 
@@ -176,6 +276,10 @@ class SpotifyPumpNotifier extends StateNotifier<SpotifyPumpState> {
     if (mix == null) {
       state = state.copyWith(error: 'Escolha uma playlist de pump no Perfil.');
       return;
+    }
+
+    if (!state.connected && _prefs.spotifyLinked) {
+      await reconnectSilently();
     }
 
     if (state.connected) {
@@ -240,7 +344,7 @@ class SpotifyPumpNotifier extends StateNotifier<SpotifyPumpState> {
     await skipNext();
   }
 
-  /// Início de treino/HIIT: conecta e, se marcado, dispara a mix.
+  /// Início de treino/HIIT: reconecta se já vinculado e, se marcado, dispara a mix.
   Future<void> onWorkoutStarted() async {
     if (!spotifyRemoteSupported) return;
     if (isConfigured) {
@@ -258,6 +362,15 @@ class SpotifyPumpNotifier extends StateNotifier<SpotifyPumpState> {
       _prefs.spotifyPlaylistUri,
       name: _prefs.spotifyPlaylistName,
     );
+  }
+
+  Future<void> _listenConnection() async {
+    await _connSub?.cancel();
+    _connSub = SpotifySdk.subscribeConnectionStatus().listen((status) {
+      if (!status.connected && state.connected) {
+        state = state.copyWith(connected: false, isPaused: true);
+      }
+    });
   }
 
   Future<void> _listenPlayer() async {
@@ -290,6 +403,7 @@ class SpotifyPumpNotifier extends StateNotifier<SpotifyPumpState> {
   }
 
   String _friendlyError(Object e) {
+    if (e is String && e.isNotEmpty) return e;
     if (e is PlatformException) {
       final code = e.code;
       final details = '${e.details ?? ''}'.trim();

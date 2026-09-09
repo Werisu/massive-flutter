@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/providers/app_providers.dart';
 import 'core/routing/app_router.dart';
 import 'core/services/keep_alive_service.dart';
+import 'core/services/spotify_pump_service.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_spacing.dart';
 import 'core/theme/app_theme.dart';
@@ -34,6 +35,7 @@ class _MassiveAppState extends ConsumerState<MassiveApp> {
   @override
   Widget build(BuildContext context) {
     ref.watch(autoSyncBootstrapProvider);
+    ref.watch(spotifyPumpProvider);
     ref.listen<bool>(
       preferencesProvider.select((p) => p.keepAliveEnabled),
       (previous, next) {

@@ -84,7 +84,7 @@ class _SpotifySettingsCardState extends ConsumerState<SpotifySettingsCard> {
           Text(
             'Controle a faixa no descanso sem desbloquear o celular. '
             'Série valendo concluída pode pular pra próxima música. '
-            'Na primeira conexão o Spotify pede autorização — aceite e volta.',
+            'O login só aparece na primeira vez; depois o app reconecta sozinho.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: AppSpacing.md),
@@ -248,7 +248,9 @@ class _SpotifySettingsCardState extends ConsumerState<SpotifySettingsCard> {
                     ? 'Desconectar Spotify'
                     : pump.connecting
                         ? 'Conectando…'
-                        : 'Conectar Spotify',
+                        : prefs.spotifyLinked
+                            ? 'Reconectar Spotify'
+                            : 'Conectar Spotify',
                 icon: Icons.headphones,
                 isLoading: pump.connecting,
                 onPressed: pump.connecting

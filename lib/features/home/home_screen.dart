@@ -18,6 +18,7 @@ import '../../data/services/history_grouping.dart';
 import '../../data/services/workout_share_snapshot.dart';
 import '../../data/services/workout_streak.dart';
 import '../share/workout_share_sheet.dart';
+import '../spotify/spotify_now_playing_banner.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -68,6 +69,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               _StreakChip(label: streakLabel),
             ],
             const SizedBox(height: AppSpacing.md),
+            const SpotifyNowPlayingBanner(),
             const SyncStatusCard(),
             const SizedBox(height: AppSpacing.lg),
             SectionHeader(title: 'Treino de hoje'),

@@ -40,6 +40,21 @@ void main() {
     expect(encoded.spotifyPlaylistName, 'Beast Mode');
     expect(encoded.spotifyAutoplay, isFalse);
     expect(encoded.spotifySkipOnSet, isFalse);
+    expect(encoded.spotifyLinked, isFalse);
+  });
+
+  test('vínculo do Spotify sobrevive ao JSON local', () {
+    final at = DateTime.utc(2026, 9, 9, 12);
+    final prefs = UserPreferences(
+      userName: 'Atleta',
+      spotifyLinked: true,
+      spotifyAccessToken: 'tok',
+      spotifyAccessTokenAt: at,
+    );
+    final encoded = UserPreferences.fromJson(prefs.toJson());
+    expect(encoded.spotifyLinked, isTrue);
+    expect(encoded.spotifyAccessToken, 'tok');
+    expect(encoded.spotifyAccessTokenAt, at);
   });
 
   test('JSON antigo assume autoplay e skip ligados', () {
@@ -51,5 +66,7 @@ void main() {
     expect(prefs.spotifyAutoplay, isTrue);
     expect(prefs.spotifySkipOnSet, isTrue);
     expect(prefs.spotifyPlaylistUri, '');
+    expect(prefs.spotifyLinked, isFalse);
+    expect(prefs.spotifyAccessToken, '');
   });
 }

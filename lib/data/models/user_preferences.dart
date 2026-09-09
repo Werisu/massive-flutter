@@ -19,6 +19,9 @@ class UserPreferences {
     this.spotifyPlaylistName = '',
     this.spotifyAutoplay = true,
     this.spotifySkipOnSet = true,
+    this.spotifyLinked = false,
+    this.spotifyAccessToken = '',
+    this.spotifyAccessTokenAt,
   });
 
   final String userName;
@@ -44,6 +47,9 @@ class UserPreferences {
   final String spotifyPlaylistName;
   final bool spotifyAutoplay;
   final bool spotifySkipOnSet;
+  final bool spotifyLinked;
+  final String spotifyAccessToken;
+  final DateTime? spotifyAccessTokenAt;
 
   UserPreferences copyWith({
     String? userName,
@@ -63,6 +69,10 @@ class UserPreferences {
     String? spotifyPlaylistName,
     bool? spotifyAutoplay,
     bool? spotifySkipOnSet,
+    bool? spotifyLinked,
+    String? spotifyAccessToken,
+    DateTime? spotifyAccessTokenAt,
+    bool clearAccessTokenAt = false,
   }) {
     return UserPreferences(
       userName: userName ?? this.userName,
@@ -83,6 +93,11 @@ class UserPreferences {
       spotifyPlaylistName: spotifyPlaylistName ?? this.spotifyPlaylistName,
       spotifyAutoplay: spotifyAutoplay ?? this.spotifyAutoplay,
       spotifySkipOnSet: spotifySkipOnSet ?? this.spotifySkipOnSet,
+      spotifyLinked: spotifyLinked ?? this.spotifyLinked,
+      spotifyAccessToken: spotifyAccessToken ?? this.spotifyAccessToken,
+      spotifyAccessTokenAt: clearAccessTokenAt
+          ? null
+          : (spotifyAccessTokenAt ?? this.spotifyAccessTokenAt),
     );
   }
 
@@ -104,6 +119,9 @@ class UserPreferences {
         'spotifyPlaylistName': spotifyPlaylistName,
         'spotifyAutoplay': spotifyAutoplay,
         'spotifySkipOnSet': spotifySkipOnSet,
+        'spotifyLinked': spotifyLinked,
+        'spotifyAccessToken': spotifyAccessToken,
+        'spotifyAccessTokenAt': spotifyAccessTokenAt?.toIso8601String(),
       };
 
   factory UserPreferences.fromJson(Map<String, dynamic> json) {
@@ -146,6 +164,11 @@ class UserPreferences {
       spotifyPlaylistName: json['spotifyPlaylistName'] as String? ?? '',
       spotifyAutoplay: json['spotifyAutoplay'] as bool? ?? true,
       spotifySkipOnSet: json['spotifySkipOnSet'] as bool? ?? true,
+      spotifyLinked: json['spotifyLinked'] as bool? ?? false,
+      spotifyAccessToken: json['spotifyAccessToken'] as String? ?? '',
+      spotifyAccessTokenAt: json['spotifyAccessTokenAt'] != null
+          ? DateTime.tryParse(json['spotifyAccessTokenAt'] as String)
+          : null,
     );
   }
 }

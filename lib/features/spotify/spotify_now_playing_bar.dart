@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -7,6 +5,7 @@ import '../../core/providers/app_providers.dart';
 import '../../core/services/spotify_pump_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import 'spotify_vinyl_disc.dart';
 
 /// Mini player compacto para o treino — skip sem sair da série.
 class SpotifyNowPlayingBar extends ConsumerWidget {
@@ -46,7 +45,11 @@ class SpotifyNowPlayingBar extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            _Artwork(bytes: pump.artwork),
+            SpotifyVinylDisc(
+              artwork: pump.artwork,
+              spinning: pump.connected && !pump.isPaused,
+              size: 48,
+            ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Column(
@@ -104,29 +107,6 @@ class SpotifyNowPlayingBar extends ConsumerWidget {
               ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _Artwork extends StatelessWidget {
-  const _Artwork({this.bytes});
-
-  final Uint8List? bytes;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: SizedBox(
-        width: 44,
-        height: 44,
-        child: bytes == null
-            ? const ColoredBox(
-                color: AppColors.surface,
-                child: Icon(Icons.graphic_eq, color: AppColors.primaryLight),
-              )
-            : Image.memory(bytes!, fit: BoxFit.cover),
       ),
     );
   }

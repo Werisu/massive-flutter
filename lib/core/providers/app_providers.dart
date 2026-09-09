@@ -59,6 +59,10 @@ class PreferencesNotifier extends StateNotifier<UserPreferences> {
     String? playlistName,
     bool? autoplay,
     bool? skipOnSet,
+    bool? linked,
+    String? accessToken,
+    DateTime? accessTokenAt,
+    bool clearAccessToken = false,
   }) async {
     final next = state.copyWith(
       spotifyClientId: clientId,
@@ -66,6 +70,10 @@ class PreferencesNotifier extends StateNotifier<UserPreferences> {
       spotifyPlaylistName: playlistName,
       spotifyAutoplay: autoplay,
       spotifySkipOnSet: skipOnSet,
+      spotifyLinked: linked,
+      spotifyAccessToken: clearAccessToken ? '' : accessToken,
+      spotifyAccessTokenAt: accessTokenAt,
+      clearAccessTokenAt: clearAccessToken,
     );
     await _repo.save(next);
     state = next;
@@ -151,6 +159,9 @@ class PreferencesNotifier extends StateNotifier<UserPreferences> {
       spotifyPlaylistName: state.spotifyPlaylistName,
       spotifyAutoplay: state.spotifyAutoplay,
       spotifySkipOnSet: state.spotifySkipOnSet,
+      spotifyLinked: state.spotifyLinked,
+      spotifyAccessToken: state.spotifyAccessToken,
+      spotifyAccessTokenAt: state.spotifyAccessTokenAt,
     );
     await _repo.save(cleared);
     state = cleared;
