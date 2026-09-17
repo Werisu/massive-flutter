@@ -109,3 +109,34 @@ String weightSuggestion({
 String weekdayWorkoutLabel(Weekday day, String name) {
   return '${day.labelUpper} — $name'.toUpperCase();
 }
+
+DateTime calendarDateOf(DateTime date) =>
+    DateTime(date.year, date.month, date.day);
+
+bool isSameCalendarDay(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;
+
+String formatCalendarDate(DateTime date) {
+  final d = calendarDateOf(date);
+  final dd = d.day.toString().padLeft(2, '0');
+  final mm = d.month.toString().padLeft(2, '0');
+  return '$dd/$mm/${d.year}';
+}
+
+/// `Hoje` / `Ontem`, ou `null` se for outro dia.
+String? relativeHistoryWord(DateTime date, {DateTime? now}) {
+  final today = calendarDateOf(now ?? DateTime.now());
+  final d = calendarDateOf(date);
+  final diff = today.difference(d).inDays;
+  if (diff == 0) return 'Hoje';
+  if (diff == 1) return 'Ontem';
+  return null;
+}
+
+/// Ex.: `Ontem · 16/09/2026`, `Quarta · 16/09/2026`.
+String formatHistoryDateLabel(DateTime date, {DateTime? now}) {
+  final formatted = formatCalendarDate(date);
+  final relative = relativeHistoryWord(date, now: now);
+  if (relative != null) return '$relative · $formatted';
+  return '${Weekday.fromDateTime(date).labelPt} · $formatted';
+}

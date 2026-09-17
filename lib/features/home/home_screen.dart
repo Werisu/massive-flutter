@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 
 import '../../core/providers/app_providers.dart';
 import '../../core/theme/app_colors.dart';
@@ -10,14 +9,10 @@ import '../../core/utils/formatters.dart';
 import '../../core/utils/fun_copy.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../core/widgets/sync_status_card.dart';
-import '../../data/models/workout_session.dart';
 import '../../data/repositories/session_repository.dart';
-import '../../data/seed/protocol_data.dart';
-import '../../data/services/exercise_catalog.dart';
 import '../../data/services/history_grouping.dart';
-import '../../data/services/workout_share_snapshot.dart';
 import '../../data/services/workout_streak.dart';
-import '../share/workout_share_sheet.dart';
+import '../history/history_day_card.dart';
 import '../spotify/spotify_now_playing_banner.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -42,7 +37,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final today = ref.watch(todayPlanProvider);
     ref.watch(sessionsProvider);
     final repo = ref.watch(sessionRepositoryProvider);
+    final finished = repo.getFinishedSessions();
     final last = repo.getLastFinishedSession();
+    final yesterdayDays = HistoryGrouping.daysOn(
+      finished,
+      DateTime.now().subtract(const Duration(days: 1)),
+    );
+    final lastDay = last == null
+        ? null
+        : HistoryGrouping.findById(
+            finished,
+            HistoryGrouping.dayKey(last.startedAt, last.workoutPlanId),
+          );
+    final lastIsYesterday = lastDay != null &&
+        yesterdayDays.any((day) => day.id == lastDay.id);
     final active = repo.getActiveSession();
     final greeting = greetingForNow();
     final streak = WorkoutStreak.current(repo.getFinishedSessions());
@@ -140,14 +148,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: AppSpacing.xl),
-            SectionHeader(
-              title: 'Seu último treino',
-              actionLabel: 'Histórico',
-              onAction: () => context.push('/history'),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            if (last == null)
+            if (yesterdayDays.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.xl),
+              SectionHeader(
+                title: 'Treino de ontem',
+                actionLabel: 'Histórico',
+                onAction: () => context.push('/history'),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              for (var i = 0; i < yesterdayDays.length; i++) ...[
+                if (i > 0) const SizedBox(height: AppSpacing.md),
+                HistoryDayCard(
+                  day: yesterdayDays[i],
+                  highlighted: true,
+                  showShareIcon: false,
+                  shareButtonLabel: 'Compartilhar',
+                  shareHeadline: 'Treino de ontem',
+                ),
+              ],
+            ],
+            if (last == null || lastDay == null) ...[
+              const SizedBox(height: AppSpacing.xl),
+              SectionHeader(
+                title: 'Seu último treino',
+                actionLabel: yesterdayDays.isEmpty ? 'Histórico' : null,
+                onAction: yesterdayDays.isEmpty
+                    ? () => context.push('/history')
+                    : null,
+              ),
+              const SizedBox(height: AppSpacing.md),
               AppCard(
                 child: EmptyState(
                   title: FunCopy.firstWorkoutTitle,
@@ -159,9 +188,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ? null
                       : () => context.push('/session/${today.id}'),
                 ),
-              )
-            else
-              _LastWorkoutCard(sessionId: last.id),
+              ),
+            ] else if (!lastIsYesterday) ...[
+              const SizedBox(height: AppSpacing.xl),
+              SectionHeader(
+                title: 'Seu último treino',
+                actionLabel: yesterdayDays.isEmpty ? 'Histórico' : null,
+                onAction: yesterdayDays.isEmpty
+                    ? () => context.push('/history')
+                    : null,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              HistoryDayCard(day: lastDay),
+            ],
             const SizedBox(height: AppSpacing.xl),
             SectionHeader(title: 'Resumo'),
             const SizedBox(height: AppSpacing.md),
@@ -245,121 +284,6 @@ class _StreakChip extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _LastWorkoutCard extends ConsumerWidget {
-  const _LastWorkoutCard({required this.sessionId});
-
-  final String sessionId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final repo = ref.watch(sessionRepositoryProvider);
-    final session = repo.getById(sessionId);
-    if (session == null) return const SizedBox.shrink();
-    final dayId =
-        HistoryGrouping.dayKey(session.startedAt, session.workoutPlanId);
-    final day = HistoryGrouping.findById(repo.getFinishedSessions(), dayId);
-    final plan = ProtocolData.planById(session.workoutPlanId);
-    final date = DateFormat('dd/MM/yyyy').format(session.startedAt);
-
-    SetRecord? highlight;
-    final exercises = day?.exercises ?? session.exercises;
-    for (final ex in exercises) {
-      for (final set in ex.sets.reversed) {
-        if (set.completed && set.weight != null) {
-          highlight = set;
-          break;
-        }
-      }
-      if (highlight != null) break;
-    }
-
-    final exerciseName = highlight == null
-        ? null
-        : ExerciseCatalog.nameOf(highlight.exerciseId);
-
-    return AppCard(
-      onTap: () => context.push('/history/day/$dayId'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(date, style: Theme.of(context).textTheme.bodySmall),
-              ),
-              if (day != null)
-                IconButton(
-                  tooltip: 'Compartilhar treino',
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 40,
-                    minHeight: 40,
-                  ),
-                  icon: const Icon(Icons.ios_share_rounded, size: 20),
-                  onPressed: () {
-                    showWorkoutShareSheet(
-                      context,
-                      WorkoutShareSnapshot.fromDay(
-                        day: day,
-                        allFinishedSessions: repo.getFinishedSessions(),
-                        athleteName: ref.read(preferencesProvider).userName,
-                        hiitCompleted: ref
-                            .read(hiitCompletionProvider)
-                            .completedOn(day.date),
-                      ),
-                    );
-                  },
-                ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            plan == null
-                ? 'Treino'
-                : '${plan.weekday.labelPt} — ${plan.name}',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            day == null
-                ? '${session.completedExercises}/${session.exercises.length} exercícios concluídos'
-                : '${day.completedExercises}/${day.exerciseCount} exercícios'
-                    '${day.sessionCount > 1 ? ' · ${day.sessionCount} registros unidos' : ''}',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          if (highlight != null && exerciseName != null) ...[
-            const SizedBox(height: AppSpacing.md),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceElevated,
-                borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(exerciseName,
-                      style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    '${formatWeight(highlight.weight)} × ${highlight.repetitions ?? '—'} reps'
-                    '${highlight.rir != null ? ' · RIR ${highlight.rir}' : ''}',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.primaryLight,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
       ),
     );
   }

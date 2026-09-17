@@ -102,6 +102,14 @@ void main() {
     expect(snapshot.shareCaption, contains('HIIT concluído'));
     expect(snapshot.shareCaption, contains('Dev: Wellysson N Rocha'));
     expect(snapshot.fileStem, 'massive-arms-2026-03-24');
+    expect(
+      snapshot.captionFor(now: DateTime(2026, 3, 25)),
+      contains('Ontem eu treinei'),
+    );
+    expect(
+      snapshot.captionFor(now: DateTime(2026, 3, 25)),
+      contains('Tríceps Barra V de Costas: 55×8'),
+    );
   });
 
   test('snapshot marca evolução de reps sem PR de carga', () {

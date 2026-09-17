@@ -1,5 +1,6 @@
 import 'package:collection/collection.dart';
 
+import '../../core/utils/formatters.dart';
 import '../models/workout_session.dart';
 import '../seed/protocol_data.dart';
 
@@ -112,6 +113,18 @@ abstract final class HistoryGrouping {
       if (day.id == dayId) return day;
     }
     return null;
+  }
+
+  /// Treinos finalizados naquele dia civil (pode haver mais de um plano).
+  static List<WorkoutDaySummary> daysOn(
+    List<WorkoutSession> sessions,
+    DateTime date,
+  ) {
+    final target = calendarDateOf(date);
+    return [
+      for (final day in groupFinishedSessions(sessions))
+        if (isSameCalendarDay(day.date, target)) day,
+    ];
   }
 
   /// Une exercícios de várias sessões do mesmo dia.

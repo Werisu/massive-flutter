@@ -37,9 +37,12 @@ class HistoryDayDetailScreen extends ConsumerWidget {
     }
 
     final plan = ProtocolData.planById(day.workoutPlanId);
-    final dateLabel = plan != null
-        ? '${plan.weekday.labelPt}, ${DateFormat('dd/MM/yyyy').format(day.date)}'
-        : DateFormat('dd/MM/yyyy').format(day.date);
+    final relative = relativeHistoryWord(day.date);
+    final dateLabel = [
+      ?relative,
+      if (plan != null) plan.weekday.labelPt,
+      DateFormat('dd/MM/yyyy').format(day.date),
+    ].join(' · ');
 
     return Scaffold(
       appBar: AppBar(
@@ -56,7 +59,13 @@ class HistoryDayDetailScreen extends ConsumerWidget {
                 hiitCompleted:
                     ref.read(hiitCompletionProvider).completedOn(day.date),
               );
-              showWorkoutShareSheet(context, snapshot);
+              showWorkoutShareSheet(
+                context,
+                snapshot,
+                headline: relativeHistoryWord(day.date) == 'Ontem'
+                    ? 'Treino de ontem'
+                    : 'Compartilhar treino',
+              );
             },
           ),
         ],

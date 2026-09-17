@@ -85,20 +85,36 @@ class WorkoutShareSnapshot {
     return 'massive-arms-$y-$m-$d';
   }
 
-  String get shareCaption {
+  String get shareCaption => captionFor();
+
+  /// Texto pronto pra colar no WhatsApp (vai junto da imagem no share sheet).
+  String captionFor({DateTime? now}) {
+    final relative = relativeHistoryWord(date, now: now);
+    final titleLine = relative == null
+        ? '$workoutTitle · $dateLabel'
+        : '$relative eu treinei $workoutTitle';
     final stats = <String>[
       formatVolumeKg(volumeKg),
       if (duration != null) formatDurationShort(duration!),
       '$exerciseCount ${exerciseCount == 1 ? 'exercício' : 'exercícios'}',
     ];
     final lines = <String>[
-      '$workoutTitle · $dateLabel',
+      titleLine,
       stats.join(' · '),
     ];
     if (prCount > 0) {
-      lines.add('$prCount ${prCount == 1 ? 'recorde pessoal' : 'recordes pessoais'}');
+      lines.add(
+        '$prCount ${prCount == 1 ? 'recorde pessoal' : 'recordes pessoais'}',
+      );
     }
     if (hiitCompleted) lines.add('HIIT concluído');
+    if (exercises.isNotEmpty) {
+      lines.add('');
+      for (final ex in exercises) {
+        final loads = ex.sets.map((s) => s.loadLabel).join(', ');
+        lines.add(loads.isEmpty ? '• ${ex.name}' : '• ${ex.name}: $loads');
+      }
+    }
     lines.add('');
     lines.add('Treino com Massive Arms');
     lines.add('Dev: Wellysson N Rocha');

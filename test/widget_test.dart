@@ -179,6 +179,46 @@ void main() {
     expect(a, '2026-03-24_plan_monday');
   });
 
+  test('histórico acha treinos do dia civil e rotula ontem', () {
+    final yesterday = DateTime(2026, 9, 16, 20);
+    final today = DateTime(2026, 9, 17, 8);
+    final sessions = [
+      WorkoutSession(
+        id: 'y',
+        workoutPlanId: 'plan_wednesday',
+        startedAt: yesterday,
+        finishedAt: yesterday.add(const Duration(minutes: 50)),
+        exercises: const [],
+      ),
+      WorkoutSession(
+        id: 't',
+        workoutPlanId: 'plan_thursday',
+        startedAt: today,
+        finishedAt: today.add(const Duration(minutes: 40)),
+        exercises: const [],
+      ),
+    ];
+
+    final days = HistoryGrouping.daysOn(sessions, yesterday);
+    expect(days, hasLength(1));
+    expect(days.single.workoutPlanId, 'plan_wednesday');
+    expect(HistoryGrouping.daysOn(sessions, today).single.workoutPlanId,
+        'plan_thursday');
+
+    expect(
+      formatHistoryDateLabel(yesterday, now: today),
+      'Ontem · 16/09/2026',
+    );
+    expect(
+      formatHistoryDateLabel(today, now: today),
+      'Hoje · 17/09/2026',
+    );
+    expect(
+      formatHistoryDateLabel(DateTime(2026, 9, 15), now: today),
+      'Terça · 15/09/2026',
+    );
+  });
+
   test('resumo de séries do protocolo para exercício', () {
     final summary = ProtocolData.setsSummary('ex_triceps_barra_v');
     expect(summary, contains('Aquecimento'));
