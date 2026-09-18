@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/providers/app_providers.dart';
 import 'core/routing/app_router.dart';
 import 'core/services/keep_alive_service.dart';
+import 'core/services/screen_wake_service.dart';
 import 'core/services/spotify_pump_service.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_spacing.dart';
@@ -16,12 +17,15 @@ class MassiveApp extends ConsumerStatefulWidget {
   ConsumerState<MassiveApp> createState() => _MassiveAppState();
 }
 
-class _MassiveAppState extends ConsumerState<MassiveApp> {
+class _MassiveAppState extends ConsumerState<MassiveApp>
+    with WidgetsBindingObserver {
   bool _showSplash = true;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    ScreenWakeService.instance.acquire(ScreenWakeService.appHolder);
     Future<void>.delayed(const Duration(milliseconds: 1100), () {
       if (mounted) setState(() => _showSplash = false);
     });
@@ -33,9 +37,28 @@ class _MassiveAppState extends ConsumerState<MassiveApp> {
   }
 
   @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    ScreenWakeService.instance.setInForeground(false);
+    ScreenWakeService.instance.release(ScreenWakeService.appHolder);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    final inForeground = state == AppLifecycleState.resumed;
+    if (inForeground ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      ScreenWakeService.instance.setInForeground(inForeground);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     ref.watch(autoSyncBootstrapProvider);
-    ref.watch(spotifyPumpProvider);
+    ref.watch(spotifyPumpProvider.notifier);
     ref.listen<bool>(
       preferencesProvider.select((p) => p.keepAliveEnabled),
       (previous, next) {

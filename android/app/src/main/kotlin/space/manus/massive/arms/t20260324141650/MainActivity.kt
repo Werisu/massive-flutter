@@ -13,6 +13,16 @@ import io.flutter.plugin.common.MethodChannel
 import java.security.MessageDigest
 
 class MainActivity : FlutterActivity() {
+    override fun onResume() {
+        super.onResume()
+        setKeepScreenOn(true)
+    }
+
+    override fun onPause() {
+        setKeepScreenOn(false)
+        super.onPause()
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(
