@@ -5,6 +5,7 @@ import '../../core/providers/app_providers.dart';
 import '../../core/services/spotify_pump_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import 'pump_trainer_sticker.dart';
 import 'spotify_vinyl_disc.dart';
 
 /// Mini player compacto para o treino — skip sem sair da série.
@@ -26,88 +27,125 @@ class SpotifyNowPlayingBar extends ConsumerWidget {
     final title = pump.hasTrack
         ? pump.trackName!
         : mixName.isNotEmpty
-            ? mixName
-            : 'Spotify';
-    final subtitle = pump.artistName ??
+        ? mixName
+        : 'Spotify';
+    final subtitle =
+        pump.artistName ??
         (pump.connected
             ? 'No ponto'
             : notifier.isConfigured
-                ? 'Toque para conectar'
-                : 'Abre no app do Spotify');
+            ? 'Toque para conectar'
+            : 'Abre no app do Spotify');
 
     return Material(
       color: AppColors.surfaceElevated,
       borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: AppSpacing.sm,
-        ),
-        child: Row(
+      clipBehavior: Clip.antiAlias,
+      child: SizedBox(
+        height: 84,
+        child: Stack(
           children: [
-            SpotifyVinylDisc(
-              artwork: pump.artwork,
-              spinning: pump.connected && !pump.isPaused,
-              size: 48,
+            const Positioned(
+              right: 0,
+              top: 0,
+              bottom: 0,
+              child: PumpTrainerSticker(height: 84, showLabel: false),
             ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            Padding(
+              padding: const EdgeInsets.only(left: AppSpacing.sm, right: 62),
+              child: Row(
                 children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium,
+                  SpotifyVinylDisc(
+                    artwork: pump.artwork,
+                    spinning: pump.connected && !pump.isPaused,
+                    size: 44,
                   ),
-                  Text(
-                    subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall,
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
                   ),
+                  if (pump.connected) ...[
+                    _BarButton(
+                      tooltip: 'Anterior',
+                      onPressed: notifier.skipPrevious,
+                      icon: Icons.skip_previous_rounded,
+                    ),
+                    _BarButton(
+                      tooltip: pump.isPaused ? 'Tocar' : 'Pausar',
+                      onPressed: notifier.togglePlay,
+                      icon: pump.isPaused
+                          ? Icons.play_arrow_rounded
+                          : Icons.pause_rounded,
+                    ),
+                    _BarButton(
+                      tooltip: 'Próxima',
+                      onPressed: notifier.skipNext,
+                      icon: Icons.skip_next_rounded,
+                    ),
+                  ] else
+                    _BarButton(
+                      tooltip: notifier.isConfigured ? 'Conectar' : 'Abrir mix',
+                      onPressed: () {
+                        if (notifier.isConfigured) {
+                          notifier.connect(startMix: true);
+                        } else {
+                          notifier.playMix();
+                        }
+                      },
+                      icon: notifier.isConfigured
+                          ? Icons.headphones
+                          : Icons.open_in_new,
+                      color: AppColors.primaryLight,
+                    ),
                 ],
               ),
             ),
-            if (pump.connected) ...[
-              IconButton(
-                tooltip: 'Anterior',
-                onPressed: notifier.skipPrevious,
-                icon: const Icon(Icons.skip_previous_rounded),
-              ),
-              IconButton(
-                tooltip: pump.isPaused ? 'Tocar' : 'Pausar',
-                onPressed: notifier.togglePlay,
-                icon: Icon(
-                  pump.isPaused
-                      ? Icons.play_arrow_rounded
-                      : Icons.pause_rounded,
-                ),
-              ),
-              IconButton(
-                tooltip: 'Próxima',
-                onPressed: notifier.skipNext,
-                icon: const Icon(Icons.skip_next_rounded),
-              ),
-            ] else
-              IconButton(
-                tooltip: notifier.isConfigured ? 'Conectar' : 'Abrir mix',
-                onPressed: () {
-                  if (notifier.isConfigured) {
-                    notifier.connect(startMix: true);
-                  } else {
-                    notifier.playMix();
-                  }
-                },
-                icon: Icon(
-                  notifier.isConfigured ? Icons.headphones : Icons.open_in_new,
-                  color: AppColors.primaryLight,
-                ),
-              ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _BarButton extends StatelessWidget {
+  const _BarButton({
+    required this.tooltip,
+    required this.onPressed,
+    required this.icon,
+    this.color,
+  });
+
+  final String tooltip;
+  final VoidCallback onPressed;
+  final IconData icon;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+      icon: Icon(icon, color: color, size: 22),
     );
   }
 }
