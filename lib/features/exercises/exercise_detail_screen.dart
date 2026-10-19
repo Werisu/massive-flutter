@@ -35,7 +35,11 @@ class ExerciseDetailScreen extends ConsumerWidget {
     }
 
     ref.watch(sessionsProvider);
-    final plans = ProtocolData.plansContainingExercise(exerciseId);
+    final split = ref.watch(preferencesProvider).trainingSplit;
+    final plans = ProtocolData.plansContainingExercise(
+      exerciseId,
+      split: split,
+    );
     final repo = ref.watch(sessionRepositoryProvider);
     final sessions = repo.getFinishedSessions();
     final dayLogs = repo.getExerciseDayHistory(exerciseId);
@@ -46,8 +50,11 @@ class ExerciseDetailScreen extends ConsumerWidget {
     );
     final best = ProgressAnalytics.bestMarkForExercise(sessions, exerciseId);
     final tip = ProgressAnalytics.tipForExercise(sessions, exerciseId);
-    final setsSummary = ProtocolData.setsSummary(exerciseId);
-    final prescription = ProtocolData.firstPrescription(exerciseId);
+    final setsSummary = ProtocolData.setsSummary(exerciseId, split: split);
+    final prescription = ProtocolData.firstPrescription(
+      exerciseId,
+      split: split,
+    );
 
     return Scaffold(
       appBar: AppBar(title: Text(exercise.name)),
@@ -63,9 +70,9 @@ class ExerciseDetailScreen extends ConsumerWidget {
                 Text(
                   ExerciseCatalog.isCustom(exercise.id) ? 'Meu' : 'Variação',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.primaryLight,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    color: AppColors.primaryLight,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
               const Spacer(),
@@ -73,14 +80,14 @@ class ExerciseDetailScreen extends ConsumerWidget {
                 Text(
                   '${formatWeight(last.weight)} × ${last.repetitions ?? '—'}',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColors.primaryLight,
-                      ),
+                    color: AppColors.primaryLight,
+                  ),
                 ),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
           if (setsSummary != null) ...[
-            Text('Protocolo', style: Theme.of(context).textTheme.titleMedium),
+            Text(split.labelPt, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: AppSpacing.sm),
             AppCard(
               child: Column(
@@ -121,28 +128,34 @@ class ExerciseDetailScreen extends ConsumerWidget {
           ],
           Text('Treinos', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: AppSpacing.sm),
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: plans
-                .map(
-                  (p) => ActionChip(
-                    label: Text('${p.weekday.labelPt} — ${p.name}'),
-                    onPressed: () => context.push('/workout/${p.id}'),
-                  ),
-                )
-                .toList(),
-          ),
+          if (plans.isEmpty)
+            Text(
+              'Este exercício não entra na divisão selecionada.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            )
+          else
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: plans
+                  .map(
+                    (p) => ActionChip(
+                      label: Text('${p.weekday.labelPt} — ${p.name}'),
+                      onPressed: () => context.push('/workout/${p.id}'),
+                    ),
+                  )
+                  .toList(),
+            ),
           const SizedBox(height: AppSpacing.lg),
           Text('Vídeo', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: AppSpacing.sm),
           AppCard(
             onTap: exercise.hasVideo
                 ? () => openExternalUrl(
-                      exercise.videoUrl!,
-                      context: context,
-                      failureMessage: 'Não foi possível abrir o vídeo.',
-                    )
+                    exercise.videoUrl!,
+                    context: context,
+                    failureMessage: 'Não foi possível abrir o vídeo.',
+                  )
                 : null,
             child: Row(
               children: [
@@ -215,8 +228,8 @@ class ExerciseDetailScreen extends ConsumerWidget {
                     Text(
                       tip.message,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.warning,
-                          ),
+                        color: AppColors.warning,
+                      ),
                     ),
                     if (tip.detail != null) ...[
                       const SizedBox(height: 4),
@@ -348,9 +361,7 @@ class _DayHistoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final plan = ProtocolData.planById(log.workoutPlanId);
     final date = DateFormat('dd/MM/yyyy').format(log.date);
-    final title = plan == null
-        ? date
-        : '$date · ${plan.weekday.labelPt}';
+    final title = plan == null ? date : '$date · ${plan.weekday.labelPt}';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),

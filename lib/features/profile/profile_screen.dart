@@ -10,6 +10,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../spotify/spotify_settings_card.dart';
+import '../workouts/training_split_selector.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -44,8 +45,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   }
 
   Future<void> _refreshBackgroundStatus() async {
-    final unrestricted =
-        await KeepAliveService.instance.isBackgroundUnrestricted();
+    final unrestricted = await KeepAliveService.instance
+        .isBackgroundUnrestricted();
     final overlay = RestOverlayService.instance.isSupported
         ? await RestOverlayService.instance.hasPermission()
         : true;
@@ -67,8 +68,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
   Future<void> _signIn() async {
     setState(() => _signingIn = true);
     try {
-      final user =
-          await ref.read(authControllerProvider.notifier).signInWithGoogleAndSync();
+      final user = await ref
+          .read(authControllerProvider.notifier)
+          .signInWithGoogleAndSync();
       if (!mounted) return;
       if (user?.displayName != null && user!.displayName!.isNotEmpty) {
         _nameCtrl.text = user.displayName!;
@@ -101,9 +103,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
     try {
       await ref.read(authControllerProvider.notifier).signOut();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sessão encerrada.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Sessão encerrada.')));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -180,13 +182,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   children: [
                     CircleAvatar(
                       radius: 28,
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.25),
+                      backgroundColor: AppColors.primary.withValues(
+                        alpha: 0.25,
+                      ),
                       backgroundImage: user?.photoURL != null
                           ? NetworkImage(user!.photoURL!)
                           : null,
                       child: user?.photoURL == null
-                          ? const Icon(Icons.person,
-                              color: AppColors.primaryLight, size: 28)
+                          ? const Icon(
+                              Icons.person,
+                              color: AppColors.primaryLight,
+                              size: 28,
+                            )
                           : null,
                     ),
                     const SizedBox(width: AppSpacing.md),
@@ -243,8 +250,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                       ? () {
                           final last = syncUi.lastResult;
                           final time = prefs.lastSyncedAt != null
-                              ? DateFormat('dd/MM/yyyy HH:mm')
-                                  .format(prefs.lastSyncedAt!)
+                              ? DateFormat(
+                                  'dd/MM/yyyy HH:mm',
+                                ).format(prefs.lastSyncedAt!)
                               : null;
                           final lines = <String>[
                             'Conta conectada',
@@ -253,15 +261,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                             if (last?.success == true)
                               'Nuvem: ${last!.importedSessions} treinos'
                                   '${last.newlyImported > 0 ? ' · +${last.newlyImported} importados agora' : ''}',
-                            if (last?.success == false)
-                              'Erro: ${last!.error}',
+                            if (last?.success == false) 'Erro: ${last!.error}',
                             if (time == null)
                               'Toque em sincronizar para importar o histórico',
                           ];
                           return lines.join('\n');
                         }()
                       : 'O login usa a mesma conta Google do Firebase para manter '
-                          'perfil e histórico sincronizados entre dispositivos.',
+                            'perfil e histórico sincronizados entre dispositivos.',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
@@ -272,8 +279,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Seu nome',
-                    style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Seu nome',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: AppSpacing.md),
                 TextField(
                   controller: _nameCtrl,
@@ -313,8 +322,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Descanso padrão',
-                    style: Theme.of(context).textTheme.titleMedium),
+                Text('Divisão', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: AppSpacing.md),
+                const TrainingSplitSelector(),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Descanso padrão',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
                   'Aquecimento/preparatórias: ${prefs.restMinutesPrep} min\n'
@@ -323,8 +345,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: AppSpacing.md),
-                Text('Valendo (minutos)',
-                    style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  'Valendo (minutos)',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
                 Slider(
                   value: prefs.restMinutesWorking.toDouble(),
                   min: 2,
@@ -371,7 +395,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen>
                     }
                   },
                 ),
-                if (prefs.keepAliveEnabled && _batteryUnrestricted == false) ...[
+                if (prefs.keepAliveEnabled &&
+                    _batteryUnrestricted == false) ...[
                   const SizedBox(height: AppSpacing.sm),
                   SecondaryButton(
                     label: 'Permitir sem restrição de bateria',

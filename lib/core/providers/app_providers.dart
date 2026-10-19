@@ -18,12 +18,13 @@ import '../../data/repositories/preferences_repository.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/seed/hiit_data.dart';
 import '../../data/seed/protocol_data.dart';
+import '../../data/services/custom_workout_week.dart';
 import '../../data/services/exercise_catalog.dart';
 
 final preferencesProvider =
     StateNotifierProvider<PreferencesNotifier, UserPreferences>((ref) {
-  return PreferencesNotifier(ref.watch(preferencesRepositoryProvider));
-});
+      return PreferencesNotifier(ref.watch(preferencesRepositoryProvider));
+    });
 
 class PreferencesNotifier extends StateNotifier<UserPreferences> {
   PreferencesNotifier(this._repo) : super(_repo.get());
@@ -32,8 +33,9 @@ class PreferencesNotifier extends StateNotifier<UserPreferences> {
   final _uuid = const Uuid();
 
   Future<void> updateName(String name) async {
-    final next =
-        state.copyWith(userName: name.trim().isEmpty ? 'Atleta' : name.trim());
+    final next = state.copyWith(
+      userName: name.trim().isEmpty ? 'Atleta' : name.trim(),
+    );
     await _repo.save(next);
     state = next;
   }
@@ -42,6 +44,22 @@ class PreferencesNotifier extends StateNotifier<UserPreferences> {
     final next = state.copyWith(
       restMinutesWorking: working,
       restMinutesPrep: prep,
+    );
+    await _repo.save(next);
+    state = next;
+  }
+
+  Future<void> setTrainingSplit(TrainingSplit split) async {
+    if (state.trainingSplit == split) return;
+    final next = state.copyWith(trainingSplit: split);
+    await _repo.save(next);
+    state = next;
+  }
+
+  Future<void> saveCustomPlans(List<WorkoutPlan> plans) async {
+    final next = state.copyWith(
+      customPlans: CustomWorkoutWeek.normalize(plans),
+      trainingSplit: TrainingSplit.custom,
     );
     await _repo.save(next);
     state = next;
@@ -117,9 +135,9 @@ class PreferencesNotifier extends StateNotifier<UserPreferences> {
   }
 
   Future<void> applyProfile(UserProfile profile) async {
-    final next = profile.toPreferences(state).copyWith(
-          lastSyncedAt: DateTime.now(),
-        );
+    final next = profile
+        .toPreferences(state)
+        .copyWith(lastSyncedAt: DateTime.now());
     await _repo.save(next);
     state = next;
   }
@@ -152,6 +170,8 @@ class PreferencesNotifier extends StateNotifier<UserPreferences> {
       cloudSyncEnabled: state.cloudSyncEnabled,
       lastSyncedAt: null,
       keepAliveEnabled: state.keepAliveEnabled,
+      trainingSplit: state.trainingSplit,
+      customPlans: state.customPlans,
       exerciseSubstitutions: state.exerciseSubstitutions,
       customExercises: state.customExercises,
       spotifyClientId: state.spotifyClientId,
@@ -170,13 +190,13 @@ class PreferencesNotifier extends StateNotifier<UserPreferences> {
 
 final sessionsProvider =
     StateNotifierProvider<SessionsNotifier, List<WorkoutSession>>((ref) {
-  return SessionsNotifier(ref);
-});
+      return SessionsNotifier(ref);
+    });
 
 class SessionsNotifier extends StateNotifier<List<WorkoutSession>> {
   SessionsNotifier(this._ref)
-      : _repo = _ref.read(sessionRepositoryProvider),
-        super(_ref.read(sessionRepositoryProvider).getAllSessions());
+    : _repo = _ref.read(sessionRepositoryProvider),
+      super(_ref.read(sessionRepositoryProvider).getAllSessions());
 
   final Ref _ref;
   final SessionRepository _repo;
@@ -346,8 +366,9 @@ class SyncUiState {
   }
 }
 
-final syncUiProvider =
-    StateNotifierProvider<SyncUiNotifier, SyncUiState>((ref) {
+final syncUiProvider = StateNotifierProvider<SyncUiNotifier, SyncUiState>((
+  ref,
+) {
   return SyncUiNotifier();
 });
 
@@ -373,8 +394,8 @@ class SyncUiNotifier extends StateNotifier<SyncUiState> {
 
 final syncStatusProvider =
     StateNotifierProvider<SyncStatusNotifier, AsyncValue<SyncResult?>>((ref) {
-  return SyncStatusNotifier(ref);
-});
+      return SyncStatusNotifier(ref);
+    });
 
 class SyncStatusNotifier extends StateNotifier<AsyncValue<SyncResult?>> {
   SyncStatusNotifier(this._ref) : super(const AsyncValue.data(null));
@@ -415,8 +436,9 @@ class SyncStatusNotifier extends StateNotifier<AsyncValue<SyncResult?>> {
 
     if (result.success && pushLocalFinished) {
       try {
-        final local =
-            _ref.read(sessionRepositoryProvider).getFinishedSessions();
+        final local = _ref
+            .read(sessionRepositoryProvider)
+            .getFinishedSessions();
         for (final session in local.take(20)) {
           if (_looksLocalUuid(session.id) ||
               session.finishedAt?.isAfter(
@@ -456,8 +478,8 @@ class SyncStatusNotifier extends StateNotifier<AsyncValue<SyncResult?>> {
     if (uid == null) return null;
 
     final last = prefs.lastSyncedAt;
-    final stale = last == null ||
-        DateTime.now().difference(last) >= autoSyncInterval;
+    final stale =
+        last == null || DateTime.now().difference(last) >= autoSyncInterval;
 
     // Evita spam na mesma sessão se já sincronizou há pouco para este UID
     if (!stale && ui.autoSyncDoneForUid == uid) return null;
@@ -489,12 +511,12 @@ final autoSyncBootstrapProvider = Provider<void>((ref) {
 
 final authControllerProvider =
     StateNotifierProvider<AuthController, AsyncValue<User?>>((ref) {
-  return AuthController(ref);
-});
+      return AuthController(ref);
+    });
 
 class AuthController extends StateNotifier<AsyncValue<User?>> {
   AuthController(this._ref)
-      : super(AsyncValue.data(_ref.read(authRepositoryProvider).currentUser));
+    : super(AsyncValue.data(_ref.read(authRepositoryProvider).currentUser));
 
   final Ref _ref;
 
@@ -529,11 +551,13 @@ class AuthController extends StateNotifier<AsyncValue<User?>> {
 }
 
 final todayPlanProvider = Provider<WorkoutPlan>((ref) {
-  return ProtocolData.planForWeekday(Weekday.fromDateTime(DateTime.now()));
+  final split = ref.watch(preferencesProvider).trainingSplit;
+  return ProtocolData.planFor(split, Weekday.fromDateTime(DateTime.now()));
 });
 
 final allPlansProvider = Provider<List<WorkoutPlan>>((ref) {
-  return ProtocolData.plans;
+  final split = ref.watch(preferencesProvider).trainingSplit;
+  return ProtocolData.plansFor(split);
 });
 
 final allExercisesProvider = Provider((ref) {
@@ -547,8 +571,8 @@ final todayHiitProvider = Provider<HiitProtocol?>((ref) {
 
 final hiitCompletionProvider =
     StateNotifierProvider<HiitCompletionNotifier, HiitCompletionState>((ref) {
-  return HiitCompletionNotifier(ref.watch(hiitRepositoryProvider));
-});
+      return HiitCompletionNotifier(ref.watch(hiitRepositoryProvider));
+    });
 
 class HiitCompletionNotifier extends StateNotifier<HiitCompletionState> {
   HiitCompletionNotifier(this._repo) : super(_repo.get());

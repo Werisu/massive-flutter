@@ -13,10 +13,7 @@ import '../../data/seed/protocol_data.dart';
 import '../../data/services/exercise_catalog.dart';
 
 class SubstitutionPick {
-  const SubstitutionPick({
-    required this.exerciseId,
-    required this.persist,
-  });
+  const SubstitutionPick({required this.exerciseId, required this.persist});
 
   final String exerciseId;
   final bool persist;
@@ -87,82 +84,22 @@ class _ExerciseSubstituteSheetState
 
   Future<void> _createExercise() async {
     final protocol = ProtocolData.exerciseById(widget.protocolExerciseId);
-    final nameCtrl = TextEditingController(text: _search.text.trim());
-    var group = protocol?.muscleGroup ?? MuscleGroup.biceps;
-
-    final confirmed = await showDialog<bool>(
+    final draft = await showNewExerciseDialog(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModal) {
-            return AlertDialog(
-              title: const Text('Novo exercício'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TextField(
-                      controller: nameCtrl,
-                      autofocus: true,
-                      textCapitalization: TextCapitalization.sentences,
-                      decoration: const InputDecoration(
-                        labelText: 'Nome',
-                        hintText: 'Ex.: Martelo na polia sentado',
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    Text(
-                      'Grupo muscular',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Wrap(
-                      spacing: AppSpacing.sm,
-                      runSpacing: AppSpacing.sm,
-                      children: MuscleGroup.values
-                          .map(
-                            (g) => MuscleGroupChip(
-                              group: g,
-                              selected: group == g,
-                              onTap: () => setModal(() => group = g),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancelar'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Criar e usar'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+      initialName: _search.text.trim(),
+      initialGroup: protocol?.muscleGroup ?? MuscleGroup.biceps,
     );
-
-    final name = nameCtrl.text.trim();
-    nameCtrl.dispose();
-    if (confirmed != true || !mounted) return;
-    if (name.isEmpty) {
+    if (draft == null || !mounted) return;
+    if (draft.name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Informe o nome do exercício.')),
       );
       return;
     }
 
-    final created = await ref.read(preferencesProvider.notifier).addCustomExercise(
-          name: name,
-          muscleGroup: group,
-        );
+    final created = await ref
+        .read(preferencesProvider.notifier)
+        .addCustomExercise(name: draft.name, muscleGroup: draft.muscleGroup);
     if (!mounted) return;
     _pick(created.id);
   }
@@ -240,7 +177,10 @@ class _ExerciseSubstituteSheetState
                 onTap: () => _pick(widget.protocolExerciseId),
                 child: Row(
                   children: [
-                    const Icon(Icons.restart_alt, color: AppColors.primaryLight),
+                    const Icon(
+                      Icons.restart_alt,
+                      color: AppColors.primaryLight,
+                    ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Column(
@@ -297,9 +237,7 @@ class _ExerciseSubstituteSheetState
             ),
             const SizedBox(height: AppSpacing.sm),
             SecondaryButton(
-              label: query.isEmpty
-                  ? 'Criar exercício'
-                  : 'Criar “$query”',
+              label: query.isEmpty ? 'Criar exercício' : 'Criar “$query”',
               icon: Icons.add,
               onPressed: _createExercise,
             ),
@@ -310,6 +248,119 @@ class _ExerciseSubstituteSheetState
           ],
         ),
       ),
+    );
+  }
+}
+
+class NewExerciseDraft {
+  const NewExerciseDraft({required this.name, required this.muscleGroup});
+
+  final String name;
+  final MuscleGroup muscleGroup;
+}
+
+Future<NewExerciseDraft?> showNewExerciseDialog({
+  required BuildContext context,
+  String initialName = '',
+  MuscleGroup initialGroup = MuscleGroup.biceps,
+  String confirmLabel = 'Criar e usar',
+}) {
+  return showDialog<NewExerciseDraft>(
+    context: context,
+    builder: (context) => _NewExerciseDialog(
+      initialName: initialName,
+      initialGroup: initialGroup,
+      confirmLabel: confirmLabel,
+    ),
+  );
+}
+
+class _NewExerciseDialog extends StatefulWidget {
+  const _NewExerciseDialog({
+    required this.initialName,
+    required this.initialGroup,
+    required this.confirmLabel,
+  });
+
+  final String initialName;
+  final MuscleGroup initialGroup;
+  final String confirmLabel;
+
+  @override
+  State<_NewExerciseDialog> createState() => _NewExerciseDialogState();
+}
+
+class _NewExerciseDialogState extends State<_NewExerciseDialog> {
+  late final TextEditingController _nameCtrl;
+  late MuscleGroup _group;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.initialName);
+    _group = widget.initialGroup;
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    Navigator.pop(
+      context,
+      NewExerciseDraft(name: _nameCtrl.text.trim(), muscleGroup: _group),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Novo exercício'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _nameCtrl,
+              autofocus: true,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Nome',
+                hintText: 'Ex.: Martelo na polia sentado',
+              ),
+              onSubmitted: (_) => _submit(),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              'Grupo muscular',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.sm,
+              runSpacing: AppSpacing.sm,
+              children: [
+                for (final group in MuscleGroup.values)
+                  MuscleGroupChip(
+                    group: group,
+                    selected: _group == group,
+                    onTap: () => setState(() => _group = group),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancelar'),
+        ),
+        TextButton(onPressed: _submit, child: Text(widget.confirmLabel)),
+      ],
     );
   }
 }
@@ -383,9 +434,9 @@ class _HintChip extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.primaryLight,
-              fontWeight: FontWeight.w700,
-            ),
+          color: AppColors.primaryLight,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

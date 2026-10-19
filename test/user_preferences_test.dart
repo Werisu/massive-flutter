@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:massive_arms/data/models/enums.dart';
 import 'package:massive_arms/data/models/user_preferences.dart';
 
 void main() {
@@ -10,7 +11,24 @@ void main() {
     expect(encoded.keepAliveEnabled, isTrue);
 
     final disabled = prefs.copyWith(keepAliveEnabled: false);
-    expect(UserPreferences.fromJson(disabled.toJson()).keepAliveEnabled, isFalse);
+    expect(
+      UserPreferences.fromJson(disabled.toJson()).keepAliveEnabled,
+      isFalse,
+    );
+  });
+
+  test('divisão padrão é o protocolo e sobrevive ao JSON', () {
+    const prefs = UserPreferences(userName: 'Atleta');
+    expect(prefs.trainingSplit.name, 'protocol');
+
+    final encoded = UserPreferences.fromJson(prefs.toJson());
+    expect(encoded.trainingSplit.name, 'protocol');
+
+    final fullBody = prefs.copyWith(trainingSplit: TrainingSplit.fullBody);
+    expect(
+      UserPreferences.fromJson(fullBody.toJson()).trainingSplit,
+      TrainingSplit.fullBody,
+    );
   });
 
   test('preferências antigas sem a chave ligam keep-alive', () {
@@ -20,6 +38,7 @@ void main() {
       'restMinutesPrep': 1,
     });
     expect(prefs.keepAliveEnabled, isTrue);
+    expect(prefs.trainingSplit, TrainingSplit.protocol);
   });
 
   test('substituições de exercício sobrevivem ao JSON', () {

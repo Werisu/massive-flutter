@@ -1,4 +1,6 @@
+import 'enums.dart';
 import 'exercise.dart';
+import 'workout_plan.dart';
 
 class UserPreferences {
   const UserPreferences({
@@ -12,13 +14,15 @@ class UserPreferences {
     this.cloudSyncEnabled = true,
     this.lastSyncedAt,
     this.keepAliveEnabled = true,
+    this.trainingSplit = TrainingSplit.protocol,
+    this.customPlans = const [],
     this.exerciseSubstitutions = const {},
     this.customExercises = const [],
     this.spotifyClientId = '',
     this.spotifyPlaylistUri = '',
     this.spotifyPlaylistName = '',
     this.spotifyAutoplay = true,
-    this.spotifySkipOnSet = true,
+    this.spotifySkipOnSet = false,
     this.spotifyLinked = false,
     this.spotifyAccessToken = '',
     this.spotifyAccessTokenAt,
@@ -34,6 +38,10 @@ class UserPreferences {
   final bool cloudSyncEnabled;
   final DateTime? lastSyncedAt;
   final bool keepAliveEnabled;
+  final TrainingSplit trainingSplit;
+
+  /// Semana criada pelo usuário quando a divisão é [TrainingSplit.custom].
+  final List<WorkoutPlan> customPlans;
 
   /// Slot do plano (`WorkoutExercise.id`) → exercício substituto.
   final Map<String, String> exerciseSubstitutions;
@@ -62,6 +70,8 @@ class UserPreferences {
     bool? cloudSyncEnabled,
     DateTime? lastSyncedAt,
     bool? keepAliveEnabled,
+    TrainingSplit? trainingSplit,
+    List<WorkoutPlan>? customPlans,
     Map<String, String>? exerciseSubstitutions,
     List<Exercise>? customExercises,
     String? spotifyClientId,
@@ -85,6 +95,8 @@ class UserPreferences {
       cloudSyncEnabled: cloudSyncEnabled ?? this.cloudSyncEnabled,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       keepAliveEnabled: keepAliveEnabled ?? this.keepAliveEnabled,
+      trainingSplit: trainingSplit ?? this.trainingSplit,
+      customPlans: customPlans ?? this.customPlans,
       exerciseSubstitutions:
           exerciseSubstitutions ?? this.exerciseSubstitutions,
       customExercises: customExercises ?? this.customExercises,
@@ -102,27 +114,29 @@ class UserPreferences {
   }
 
   Map<String, dynamic> toJson() => {
-        'userName': userName,
-        'restMinutesWorking': restMinutesWorking,
-        'restMinutesPrep': restMinutesPrep,
-        'weightKg': weightKg,
-        'heightCm': heightCm,
-        'age': age,
-        'firebaseUid': firebaseUid,
-        'cloudSyncEnabled': cloudSyncEnabled,
-        'lastSyncedAt': lastSyncedAt?.toIso8601String(),
-        'keepAliveEnabled': keepAliveEnabled,
-        'exerciseSubstitutions': exerciseSubstitutions,
-        'customExercises': customExercises.map((e) => e.toJson()).toList(),
-        'spotifyClientId': spotifyClientId,
-        'spotifyPlaylistUri': spotifyPlaylistUri,
-        'spotifyPlaylistName': spotifyPlaylistName,
-        'spotifyAutoplay': spotifyAutoplay,
-        'spotifySkipOnSet': spotifySkipOnSet,
-        'spotifyLinked': spotifyLinked,
-        'spotifyAccessToken': spotifyAccessToken,
-        'spotifyAccessTokenAt': spotifyAccessTokenAt?.toIso8601String(),
-      };
+    'userName': userName,
+    'restMinutesWorking': restMinutesWorking,
+    'restMinutesPrep': restMinutesPrep,
+    'weightKg': weightKg,
+    'heightCm': heightCm,
+    'age': age,
+    'firebaseUid': firebaseUid,
+    'cloudSyncEnabled': cloudSyncEnabled,
+    'lastSyncedAt': lastSyncedAt?.toIso8601String(),
+    'keepAliveEnabled': keepAliveEnabled,
+    'trainingSplit': trainingSplit.name,
+    'customPlans': customPlans.map((plan) => plan.toJson()).toList(),
+    'exerciseSubstitutions': exerciseSubstitutions,
+    'customExercises': customExercises.map((e) => e.toJson()).toList(),
+    'spotifyClientId': spotifyClientId,
+    'spotifyPlaylistUri': spotifyPlaylistUri,
+    'spotifyPlaylistName': spotifyPlaylistName,
+    'spotifyAutoplay': spotifyAutoplay,
+    'spotifySkipTrackOnSet': spotifySkipOnSet,
+    'spotifyLinked': spotifyLinked,
+    'spotifyAccessToken': spotifyAccessToken,
+    'spotifyAccessTokenAt': spotifyAccessTokenAt?.toIso8601String(),
+  };
 
   factory UserPreferences.fromJson(Map<String, dynamic> json) {
     final raw = json['exerciseSubstitutions'];
@@ -130,6 +144,19 @@ class UserPreferences {
     if (raw is Map) {
       for (final entry in raw.entries) {
         substitutions['${entry.key}'] = '${entry.value}';
+      }
+    }
+
+    final customPlans = <WorkoutPlan>[];
+    final rawPlans = json['customPlans'];
+    if (rawPlans is List) {
+      for (final item in rawPlans) {
+        if (item is! Map) continue;
+        try {
+          customPlans.add(
+            WorkoutPlan.fromJson(Map<String, dynamic>.from(item)),
+          );
+        } catch (_) {}
       }
     }
 
@@ -157,13 +184,15 @@ class UserPreferences {
           ? DateTime.tryParse(json['lastSyncedAt'] as String)
           : null,
       keepAliveEnabled: json['keepAliveEnabled'] as bool? ?? true,
+      trainingSplit: TrainingSplit.fromName(json['trainingSplit'] as String?),
+      customPlans: customPlans,
       exerciseSubstitutions: substitutions,
       customExercises: custom,
       spotifyClientId: json['spotifyClientId'] as String? ?? '',
       spotifyPlaylistUri: json['spotifyPlaylistUri'] as String? ?? '',
       spotifyPlaylistName: json['spotifyPlaylistName'] as String? ?? '',
       spotifyAutoplay: json['spotifyAutoplay'] as bool? ?? true,
-      spotifySkipOnSet: json['spotifySkipOnSet'] as bool? ?? true,
+      spotifySkipOnSet: json['spotifySkipTrackOnSet'] as bool? ?? false,
       spotifyLinked: json['spotifyLinked'] as bool? ?? false,
       spotifyAccessToken: json['spotifyAccessToken'] as String? ?? '',
       spotifyAccessTokenAt: json['spotifyAccessTokenAt'] != null

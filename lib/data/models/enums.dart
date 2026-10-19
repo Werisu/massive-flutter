@@ -1,3 +1,28 @@
+/// Divisão semanal ativa. O protocolo original permanece o padrão.
+enum TrainingSplit {
+  protocol,
+  fullBody,
+  custom;
+
+  String get labelPt {
+    switch (this) {
+      case TrainingSplit.protocol:
+        return 'Protocolo';
+      case TrainingSplit.fullBody:
+        return 'Full body';
+      case TrainingSplit.custom:
+        return 'Meus treinos';
+    }
+  }
+
+  static TrainingSplit fromName(String? name) {
+    for (final split in TrainingSplit.values) {
+      if (split.name == name) return split;
+    }
+    return TrainingSplit.protocol;
+  }
+}
+
 enum Weekday {
   monday,
   tuesday,

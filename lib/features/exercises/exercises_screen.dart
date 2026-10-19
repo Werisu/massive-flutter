@@ -41,12 +41,10 @@ class _ExercisesScreenState extends ConsumerState<ExercisesScreen> {
     final query = _search.text.trim().toLowerCase();
 
     final filtered = all.where((e) {
-      final matchQuery =
-          query.isEmpty || e.name.toLowerCase().contains(query);
+      final matchQuery = query.isEmpty || e.name.toLowerCase().contains(query);
       final matchGroup = _filter == null || e.muscleGroup == _filter;
       return matchQuery && matchGroup;
-    }).toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
+    }).toList()..sort((a, b) => a.name.compareTo(b.name));
 
     return Scaffold(
       appBar: AppBar(title: const Text('Exercícios')),
@@ -116,8 +114,7 @@ class _ExercisesScreenState extends ConsumerState<ExercisesScreen> {
                       return ExerciseCard(
                         exercise: exercise,
                         lastSet: repo.getLastWorkingSet(exercise.id),
-                        onTap: () =>
-                            context.push('/exercise/${exercise.id}'),
+                        onTap: () => context.push('/exercise/${exercise.id}'),
                       );
                     },
                   ),
@@ -128,7 +125,7 @@ class _ExercisesScreenState extends ConsumerState<ExercisesScreen> {
   }
 }
 
-class ExerciseCard extends StatelessWidget {
+class ExerciseCard extends ConsumerWidget {
   const ExerciseCard({
     super.key,
     required this.exercise,
@@ -141,9 +138,13 @@ class ExerciseCard extends StatelessWidget {
   final SetRecord? lastSet;
 
   @override
-  Widget build(BuildContext context) {
-    final plans = ProtocolData.plansContainingExercise(exercise.id);
-    final summary = ProtocolData.setsSummary(exercise.id);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final split = ref.watch(preferencesProvider).trainingSplit;
+    final plans = ProtocolData.plansContainingExercise(
+      exercise.id,
+      split: split,
+    );
+    final summary = ProtocolData.setsSummary(exercise.id, split: split);
 
     return AppCard(
       onTap: onTap,
@@ -181,26 +182,23 @@ class ExerciseCard extends StatelessWidget {
                 Text(
                   'Meu',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.primaryLight,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    color: AppColors.primaryLight,
+                    fontWeight: FontWeight.w700,
+                  ),
                 )
               else if (ExerciseSubstitutions.isAlternative(exercise.id))
                 Text(
                   'Variação',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.primaryLight,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    color: AppColors.primaryLight,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
             ],
           ),
           if (summary != null) ...[
             const SizedBox(height: AppSpacing.sm),
-            Text(
-              summary,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            Text(summary, style: Theme.of(context).textTheme.bodySmall),
           ],
           if (plans.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),
@@ -215,9 +213,9 @@ class ExerciseCard extends StatelessWidget {
             Text(
               'Último: ${formatWeight(lastSet!.weight)} × ${lastSet!.repetitions ?? '—'} reps',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.primaryLight,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: AppColors.primaryLight,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ],

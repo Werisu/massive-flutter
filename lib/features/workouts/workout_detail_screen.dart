@@ -8,7 +8,10 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../core/widgets/input_widgets.dart';
 import '../../data/models/enums.dart';
+import '../../data/models/workout_plan.dart';
+import '../../data/seed/full_body_data.dart';
 import '../../data/seed/protocol_data.dart';
+import '../../data/services/custom_workout_week.dart';
 import '../../data/services/exercise_catalog.dart';
 import '../workout_session/exercise_substitute_sheet.dart';
 
@@ -19,6 +22,7 @@ class WorkoutDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final prefs = ref.watch(preferencesProvider);
     final plan = ProtocolData.planById(planId);
     if (plan == null) {
       return Scaffold(
@@ -27,24 +31,40 @@ class WorkoutDetailScreen extends ConsumerWidget {
       );
     }
 
-    final prefs = ref.watch(preferencesProvider);
+    final fullBody = FullBodyData.isPlan(plan.id);
+    final custom = CustomWorkoutWeek.isId(plan.id);
 
     return Scaffold(
       appBar: AppBar(
         title: Text('${plan.weekday.labelPt} — ${plan.name}'),
+        actions: [
+          if (custom)
+            IconButton(
+              tooltip: 'Editar lista',
+              onPressed: () => context.push('/custom-workouts'),
+              icon: const Icon(Icons.edit_outlined),
+            ),
+        ],
       ),
       body: plan.isDayOff
-          ? const EmptyState(
+          ? EmptyState(
               title: 'DAY OFF',
-              subtitle:
-                  'Dia de recuperação conforme o protocolo. Sono, comida e descanso fazem o músculo crescer.',
+              subtitle: custom
+                  ? 'Folga na sua lista. Edite a semana se quiser treinar neste dia.'
+                  : fullBody
+                  ? 'Dia de recuperação do full body. O treino volta na próxima segunda, quarta ou sexta.'
+                  : 'Dia de recuperação conforme o protocolo. Sono, comida e descanso fazem o músculo crescer.',
               icon: Icons.hotel_outlined,
             )
           : ListView(
               padding: const EdgeInsets.all(AppSpacing.lg),
               children: [
                 Text(
-                  '${plan.exerciseCount} exercícios · séries do protocolo. Use a troca se o equipamento não estiver disponível.',
+                  custom
+                      ? '${plan.exerciseCount} exercícios da sua lista. Use a troca se o equipamento não estiver disponível.'
+                      : fullBody
+                      ? '${plan.exerciseCount} exercícios · 3 séries valendo. Compostos em 6–10 reps, bíceps e tríceps em 8–12. Use a troca se o equipamento não estiver disponível.'
+                      : '${plan.exerciseCount} exercícios · séries do protocolo. Use a troca se o equipamento não estiver disponível.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -55,9 +75,15 @@ class WorkoutDetailScreen extends ConsumerWidget {
                   final original = replacementId == null
                       ? null
                       : ExerciseCatalog.byId(we.exerciseId);
-                  final warmup = we.sets.where((s) => s.type == SetType.warmup).length;
-                  final prep = we.sets.where((s) => s.type == SetType.preparation).length;
-                  final working = we.sets.where((s) => s.type == SetType.working).length;
+                  final warmup = we.sets
+                      .where((s) => s.type == SetType.warmup)
+                      .length;
+                  final prep = we.sets
+                      .where((s) => s.type == SetType.preparation)
+                      .length;
+                  final working = we.sets
+                      .where((s) => s.type == SetType.working)
+                      .length;
 
                   return Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -72,7 +98,9 @@ class WorkoutDetailScreen extends ConsumerWidget {
                                 height: 28,
                                 alignment: Alignment.center,
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.2),
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.2,
+                                  ),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
@@ -89,13 +117,14 @@ class WorkoutDetailScreen extends ConsumerWidget {
                                   onTap: () =>
                                       context.push('/exercise/$displayId'),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         exercise?.name ?? displayId,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleLarge,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.titleLarge,
                                       ),
                                       if (original != null)
                                         Text(
@@ -114,13 +143,14 @@ class WorkoutDetailScreen extends ConsumerWidget {
                               IconButton(
                                 tooltip: 'Substituir exercício',
                                 onPressed: () async {
-                                  final pick = await showExerciseSubstituteSheet(
-                                    context: context,
-                                    protocolExerciseId: we.exerciseId,
-                                    currentExerciseId: displayId,
-                                    persistByDefault: true,
-                                    showPersistToggle: false,
-                                  );
+                                  final pick =
+                                      await showExerciseSubstituteSheet(
+                                        context: context,
+                                        protocolExerciseId: we.exerciseId,
+                                        currentExerciseId: displayId,
+                                        persistByDefault: true,
+                                        showPersistToggle: false,
+                                      );
                                   if (pick == null) return;
                                   await ref
                                       .read(preferencesProvider.notifier)
@@ -128,8 +158,8 @@ class WorkoutDetailScreen extends ConsumerWidget {
                                         workoutExerciseId: we.id,
                                         replacementExerciseId:
                                             pick.exerciseId == we.exerciseId
-                                                ? null
-                                                : pick.exerciseId,
+                                            ? null
+                                            : pick.exerciseId,
                                       );
                                 },
                                 icon: const Icon(Icons.swap_horiz),
@@ -148,17 +178,26 @@ class WorkoutDetailScreen extends ConsumerWidget {
                               if (warmup > 0)
                                 _SetSummary(
                                   label: 'Aquecimento',
-                                  value: '${warmup}x10',
+                                  value: _setGroupLabel(
+                                    we.sets,
+                                    SetType.warmup,
+                                  ),
                                 ),
                               if (prep > 0)
                                 _SetSummary(
                                   label: 'Preparatórias',
-                                  value: '${prep}x2-7',
+                                  value: _setGroupLabel(
+                                    we.sets,
+                                    SetType.preparation,
+                                  ),
                                 ),
                               if (working > 0)
                                 _SetSummary(
                                   label: 'Valendo',
-                                  value: '${working}x8-10',
+                                  value: _setGroupLabel(
+                                    we.sets,
+                                    SetType.working,
+                                  ),
                                 ),
                             ],
                           ),
@@ -186,6 +225,12 @@ class WorkoutDetailScreen extends ConsumerWidget {
   }
 }
 
+String _setGroupLabel(List<SetPrescription> sets, SetType type) {
+  final matched = sets.where((s) => s.type == type).toList();
+  if (matched.isEmpty) return '';
+  return '${matched.length}x${matched.first.repsLabel}';
+}
+
 class _SetSummary extends StatelessWidget {
   const _SetSummary({required this.label, required this.value});
 
@@ -206,9 +251,9 @@ class _SetSummary extends StatelessWidget {
       child: Text(
         '$label: $value',
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
-            ),
+          color: AppColors.textSecondary,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

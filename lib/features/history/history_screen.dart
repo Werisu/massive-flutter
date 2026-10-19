@@ -17,8 +17,8 @@ class HistoryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(sessionsProvider);
-    final sessions =
-        ref.watch(sessionRepositoryProvider).getFinishedSessions();
+    ref.watch(preferencesProvider);
+    final sessions = ref.watch(sessionRepositoryProvider).getFinishedSessions();
     final days = HistoryGrouping.groupFinishedSessions(sessions);
     final yesterday = DateTime.now().subtract(const Duration(days: 1));
 
@@ -35,8 +35,7 @@ class HistoryScreen extends ConsumerWidget {
           : ListView.separated(
               padding: const EdgeInsets.all(AppSpacing.lg),
               itemCount: days.length,
-              separatorBuilder: (_, _) =>
-                  const SizedBox(height: AppSpacing.md),
+              separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
               itemBuilder: (context, index) {
                 final day = days[index];
                 return HistoryDayCard(

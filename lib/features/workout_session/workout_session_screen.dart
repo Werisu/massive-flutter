@@ -44,6 +44,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
   bool _loading = true;
   bool _showRest = false;
   Duration _restDuration = const Duration(minutes: 1);
+  int _restGeneration = 0;
   String? _error;
 
   final _weightCtrl = TextEditingController();
@@ -65,6 +66,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
   }
 
   Future<void> _bootstrap() async {
+    ref.read(preferencesProvider);
     final plan = ProtocolData.planById(widget.planId);
     if (plan == null || plan.isDayOff) {
       setState(() {
@@ -77,8 +79,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     }
 
     try {
-      final session =
-          await ref.read(sessionsProvider.notifier).start(plan);
+      final session = await ref.read(sessionsProvider.notifier).start(plan);
       final idx = _firstIncompleteExercise(session);
       setState(() {
         _plan = plan;
@@ -106,8 +107,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     return 0;
   }
 
-  SessionExercise get _currentExercise =>
-      _session!.exercises[_exerciseIndex];
+  SessionExercise get _currentExercise => _session!.exercises[_exerciseIndex];
 
   WorkoutExercise get _currentSlot {
     return _plan!.exercises.firstWhere(
@@ -161,7 +161,8 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
       _repsCtrl.text = '${set.repetitions}';
     } else if (suggestion?.repetitions != null) {
       final s = suggestion!;
-      final shouldPrefillReps = set.setType == SetType.working ||
+      final shouldPrefillReps =
+          set.setType == SetType.working ||
           s.sourceType == set.setType ||
           !s.fromHistory;
       if (shouldPrefillReps) {
@@ -178,8 +179,9 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     String? hint;
     if (suggestion != null &&
         (suggestion.weight != null || suggestion.repetitions != null)) {
-      final origin =
-          suggestion.fromHistory ? 'Último treino' : 'Série anterior';
+      final origin = suggestion.fromHistory
+          ? 'Último treino'
+          : 'Série anterior';
       hint =
           '$origin: ${formatWeight(suggestion.weight)} × ${suggestion.repetitions ?? '—'} reps'
           '${suggestion.rir != null ? ' · RIR ${suggestion.rir}' : ''}';
@@ -210,7 +212,9 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
         .read(sessionRepositoryProvider)
         .getLastWorkingSet(_currentExercise.exerciseId);
 
-    final updated = await ref.read(sessionsProvider.notifier).completeSet(
+    final updated = await ref
+        .read(sessionsProvider.notifier)
+        .completeSet(
           session: _session!,
           workoutExerciseId: _currentExercise.workoutExerciseId,
           setIndex: setIndex,
@@ -220,13 +224,13 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
         );
 
     final setType = updated.exercises[_exerciseIndex].sets[setIndex].setType;
-    final isPr = setType == SetType.working &&
+    final isPr =
+        setType == SetType.working &&
         previous != null &&
         previous.weight != null &&
         weight != null &&
         (weight > previous.weight! ||
-            (weight == previous.weight &&
-                (previous.repetitions ?? 0) < reps));
+            (weight == previous.weight && (previous.repetitions ?? 0) < reps));
 
     if (isPr) {
       HapticFeedback.heavyImpact();
@@ -269,6 +273,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
       _session = updated;
       _showRest = true;
       _restDuration = rest;
+      _restGeneration++;
     });
 
     if (setType == SetType.working) {
@@ -314,8 +319,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     await ref.read(sessionsProvider.notifier).finish(_session!);
     if (!mounted) return;
 
-    final finished =
-        ref.read(sessionRepositoryProvider).getFinishedSessions();
+    final finished = ref.read(sessionRepositoryProvider).getFinishedSessions();
     final day = HistoryGrouping.findById(
       finished,
       HistoryGrouping.dayKey(_session!.startedAt, _session!.workoutPlanId),
@@ -326,8 +330,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
         day: day,
         allFinishedSessions: finished,
         athleteName: ref.read(preferencesProvider).userName,
-        hiitCompleted:
-            ref.read(hiitCompletionProvider).completedOn(day.date),
+        hiitCompleted: ref.read(hiitCompletionProvider).completedOn(day.date),
       );
     }
 
@@ -403,7 +406,9 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     );
 
     if (action == 'undo') {
-      final updated = await ref.read(sessionsProvider.notifier).uncompleteSet(
+      final updated = await ref
+          .read(sessionsProvider.notifier)
+          .uncompleteSet(
             session: _session!,
             workoutExerciseId: _currentExercise.workoutExerciseId,
             setIndex: setIndex,
@@ -415,7 +420,9 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
       _prefillCurrentSet();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Série desfeita. Pode registrar de novo.')),
+        const SnackBar(
+          content: Text('Série desfeita. Pode registrar de novo.'),
+        ),
       );
     } else if (action == 'edit') {
       await _editSetDialog(setIndex);
@@ -429,8 +436,8 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
       text: set.weight == null
           ? ''
           : (set.weight == set.weight!.roundToDouble()
-              ? '${set.weight!.toInt()}'
-              : set.weight!.toStringAsFixed(1)),
+                ? '${set.weight!.toInt()}'
+                : set.weight!.toStringAsFixed(1)),
     );
     final repsCtrl = TextEditingController(
       text: set.repetitions?.toString() ?? '',
@@ -488,13 +495,15 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
 
     if (reps == null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Informe as repetições.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Informe as repetições.')));
       return;
     }
 
-    final updated = await ref.read(sessionsProvider.notifier).editSet(
+    final updated = await ref
+        .read(sessionsProvider.notifier)
+        .editSet(
           session: _session!,
           workoutExerciseId: _currentExercise.workoutExerciseId,
           setIndex: setIndex,
@@ -504,9 +513,9 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
         );
     setState(() => _session = updated);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Série atualizada.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Série atualizada.')));
   }
 
   Future<void> _openSubstitute() async {
@@ -544,7 +553,9 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     if (pick == null || !mounted) return;
     if (pick.exerciseId == _currentExercise.exerciseId) return;
 
-    final updated = await ref.read(sessionsProvider.notifier).replaceExercise(
+    final updated = await ref
+        .read(sessionsProvider.notifier)
+        .replaceExercise(
           session: _session!,
           workoutExerciseId: _currentExercise.workoutExerciseId,
           newExerciseId: pick.exerciseId,
@@ -552,7 +563,9 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
         );
 
     if (pick.persist) {
-      await ref.read(preferencesProvider.notifier).setExerciseSubstitution(
+      await ref
+          .read(preferencesProvider.notifier)
+          .setExerciseSubstitution(
             workoutExerciseId: _currentExercise.workoutExerciseId,
             replacementExerciseId: pick.exerciseId == _protocolExerciseId
                 ? null
@@ -568,17 +581,15 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
 
     if (!mounted) return;
     final name = ExerciseCatalog.nameOf(pick.exerciseId);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Trocado para $name.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Trocado para $name.')));
   }
 
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (_error != null || _session == null || _plan == null) {
@@ -598,17 +609,13 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     final last = ref
         .watch(sessionRepositoryProvider)
         .getLastWorkingSet(_currentExercise.exerciseId);
-    final prescription =
-        setIndex == null ? null : _prescriptionFor(setIndex);
+    final prescription = setIndex == null ? null : _prescriptionFor(setIndex);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(_plan!.name),
         actions: [
-          TextButton(
-            onPressed: _finishWorkout,
-            child: const Text('Finalizar'),
-          ),
+          TextButton(onPressed: _finishWorkout, child: const Text('Finalizar')),
         ],
       ),
       body: SafeArea(
@@ -679,9 +686,9 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                   Text(
                     'Exercício ${_exerciseIndex + 1}/${_session!.exercises.length}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.primaryLight,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      color: AppColors.primaryLight,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
@@ -692,10 +699,9 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                     const SizedBox(height: AppSpacing.xs),
                     Text(
                       'No lugar de ${ExerciseCatalog.nameOf(_protocolExerciseId)}',
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.copyWith(color: AppColors.textSecondary),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                   const SizedBox(height: AppSpacing.sm),
@@ -709,8 +715,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                             onPressed: () => openExternalUrl(
                               exercise!.videoUrl!,
                               context: context,
-                              failureMessage:
-                                  'Não foi possível abrir o vídeo.',
+                              failureMessage: 'Não foi possível abrir o vídeo.',
                             ),
                           ),
                         ),
@@ -730,8 +735,10 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                     AppCard(
                       child: Row(
                         children: [
-                          const Icon(Icons.history,
-                              color: AppColors.primaryLight),
+                          const Icon(
+                            Icons.history,
+                            color: AppColors.primaryLight,
+                          ),
                           const SizedBox(width: AppSpacing.md),
                           Expanded(
                             child: Column(
@@ -743,8 +750,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                                 ),
                                 Text(
                                   '${formatWeight(last.weight)} × ${last.repetitions ?? '—'} reps',
-                                  style:
-                                      Theme.of(context).textTheme.titleLarge,
+                                  style: Theme.of(context).textTheme.titleLarge,
                                 ),
                               ],
                             ),
@@ -778,8 +784,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                   if (_showRest) ...[
                     const SizedBox(height: AppSpacing.md),
                     RestTimer(
-                      key: ValueKey(_restDuration.inSeconds +
-                          DateTime.now().millisecondsSinceEpoch),
+                      key: ValueKey(_restGeneration),
                       initialDuration: _restDuration,
                       onFinished: _afterRest,
                       onSkip: _afterRest,
@@ -802,23 +807,25 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                         padding: const EdgeInsets.all(AppSpacing.md),
                         decoration: BoxDecoration(
                           color: AppColors.primary.withValues(alpha: 0.12),
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.radiusMd),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.radiusMd,
+                          ),
                           border: Border.all(
                             color: AppColors.primary.withValues(alpha: 0.35),
                           ),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.history,
-                                size: 18, color: AppColors.primaryLight),
+                            const Icon(
+                              Icons.history,
+                              size: 18,
+                              color: AppColors.primaryLight,
+                            ),
                             const SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: Text(
                                 'Pré-preenchido · $_prefillHint',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
+                                style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(
                                       color: AppColors.primaryLight,
                                       fontWeight: FontWeight.w600,
@@ -854,8 +861,11 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                       highlighted: true,
                       child: Column(
                         children: [
-                          const Icon(Icons.emoji_events_outlined,
-                              color: AppColors.primaryLight, size: 36),
+                          const Icon(
+                            Icons.emoji_events_outlined,
+                            color: AppColors.primaryLight,
+                            size: 36,
+                          ),
                           const SizedBox(height: AppSpacing.md),
                           Text(
                             _session!.exercises.every((e) => e.isCompleted)
@@ -865,8 +875,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: AppSpacing.lg),
-                          if (_exerciseIndex <
-                              _session!.exercises.length - 1)
+                          if (_exerciseIndex < _session!.exercises.length - 1)
                             PrimaryButton(
                               label: 'Próximo exercício',
                               onPressed: () {

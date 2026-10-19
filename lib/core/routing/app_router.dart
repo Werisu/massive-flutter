@@ -13,6 +13,7 @@ import '../../features/home/home_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/progress/progress_screen.dart';
 import '../../features/workout_session/workout_session_screen.dart';
+import '../../features/workouts/custom_workout_editor_screen.dart';
 import '../../features/workouts/workout_detail_screen.dart';
 import '../../features/workouts/workouts_screen.dart';
 import 'shell_scaffold.dart';
@@ -31,35 +32,35 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: '/home',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: HomeScreen(),
-            ),
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: HomeScreen()),
           ),
           GoRoute(
             path: '/workouts',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: WorkoutsScreen(),
-            ),
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: WorkoutsScreen()),
           ),
           GoRoute(
             path: '/progress',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: ProgressScreen(),
-            ),
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: ProgressScreen()),
           ),
           GoRoute(
             path: '/exercises',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: ExercisesScreen(),
-            ),
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: ExercisesScreen()),
           ),
           GoRoute(
             path: '/profile',
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: ProfileScreen(),
-            ),
+            pageBuilder: (context, state) =>
+                const NoTransitionPage(child: ProfileScreen()),
           ),
         ],
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/custom-workouts',
+        builder: (context, state) => const CustomWorkoutEditorScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,

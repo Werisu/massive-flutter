@@ -9,11 +9,14 @@ import '../../core/utils/formatters.dart';
 import '../../core/utils/fun_copy.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../core/widgets/sync_status_card.dart';
+import '../../data/models/enums.dart';
 import '../../data/repositories/session_repository.dart';
+import '../../data/services/custom_workout_week.dart';
 import '../../data/services/history_grouping.dart';
 import '../../data/services/workout_streak.dart';
 import '../history/history_day_card.dart';
 import '../spotify/spotify_now_playing_banner.dart';
+import '../workouts/training_split_selector.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -49,11 +52,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             finished,
             HistoryGrouping.dayKey(last.startedAt, last.workoutPlanId),
           );
-    final lastIsYesterday = lastDay != null &&
-        yesterdayDays.any((day) => day.id == lastDay.id);
+    final lastIsYesterday =
+        lastDay != null && yesterdayDays.any((day) => day.id == lastDay.id);
     final active = repo.getActiveSession();
     final greeting = greetingForNow();
-    final streak = WorkoutStreak.current(repo.getFinishedSessions());
+    final plans = ref.watch(allPlansProvider);
+    final customPending =
+        prefs.trainingSplit == TrainingSplit.custom &&
+        !CustomWorkoutWeek.hasTrainingDay(prefs.customPlans);
+    final streak = WorkoutStreak.current(
+      repo.getFinishedSessions(),
+      dayOffWeekdays: plans
+          .where((plan) => plan.isDayOff)
+          .map((plan) => plan.weekday)
+          .toSet(),
+    );
     final streakLabel = FunCopy.streakLabel(streak);
 
     return Scaffold(
@@ -68,9 +81,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const SizedBox(height: AppSpacing.xs),
             Text(
               FunCopy.tagline(),
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.primaryLight,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: AppColors.primaryLight),
             ),
             if (streakLabel.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.md),
@@ -82,25 +95,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const SizedBox(height: AppSpacing.lg),
             SectionHeader(title: 'Treino de hoje'),
             const SizedBox(height: AppSpacing.md),
+            TrainingSplitSelector(allowEdit: customPending),
+            const SizedBox(height: AppSpacing.md),
             AppCard(
-              highlighted: !today.isDayOff,
+              highlighted: customPending || !today.isDayOff,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     today.weekday.labelUpper,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.primaryLight,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.2,
-                        ),
+                      color: AppColors.primaryLight,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    today.isDayOff ? 'DAY OFF' : today.name.toUpperCase(),
+                    customPending
+                        ? 'SUA LISTA'
+                        : (today.isDayOff
+                              ? 'DAY OFF'
+                              : today.name.toUpperCase()),
                     style: Theme.of(context).textTheme.headlineLarge,
                   ),
-                  if (!today.isDayOff) ...[
+                  if (customPending) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    Text(
+                      'Crie os treinos da semana para ver o de hoje aqui. '
+                      'Dá para nomear cada dia, escolher os exercícios e marcar folga.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ] else if (!today.isDayOff) ...[
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       '${today.exerciseCount} exercícios',
@@ -125,7 +151,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ],
                     const SizedBox(height: AppSpacing.lg),
                     PrimaryButton(
-                      label: active != null &&
+                      label:
+                          active != null &&
                               active.workoutPlanId == today.id &&
                               !active.isFinished
                           ? 'Continuar treino'
@@ -141,7 +168,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ] else ...[
                     const SizedBox(height: AppSpacing.md),
                     Text(
-                      FunCopy.dayOffNote(),
+                      prefs.trainingSplit == TrainingSplit.custom
+                          ? 'Folga na sua lista. O treino volta no próximo dia que você marcou.'
+                          : FunCopy.dayOffNote(),
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
@@ -182,11 +211,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   title: FunCopy.firstWorkoutTitle,
                   subtitle: FunCopy.firstWorkoutSubtitle,
                   icon: Icons.rocket_launch_outlined,
-                  actionLabel:
-                      today.isDayOff ? null : 'Bora pro primeiro treino',
-                  onAction: today.isDayOff
-                      ? null
-                      : () => context.push('/session/${today.id}'),
+                  actionLabel: customPending
+                      ? 'Criar lista de treinos'
+                      : (today.isDayOff ? null : 'Bora pro primeiro treino'),
+                  onAction: customPending
+                      ? () => context.push('/custom-workouts')
+                      : (today.isDayOff
+                            ? null
+                            : () => context.push('/session/${today.id}')),
                 ),
               ),
             ] else if (!lastIsYesterday) ...[
@@ -278,9 +310,9 @@ class _StreakChip extends StatelessWidget {
             const SizedBox(width: AppSpacing.sm),
             Text(
               label,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.prGold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(color: AppColors.prGold),
             ),
           ],
         ),

@@ -5,6 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import '../local/hive_boxes.dart';
 import '../models/user_preferences.dart';
+import '../services/custom_workout_week.dart';
 import '../services/exercise_catalog.dart';
 
 final preferencesRepositoryProvider = Provider<PreferencesRepository>((ref) {
@@ -12,22 +13,36 @@ final preferencesRepositoryProvider = Provider<PreferencesRepository>((ref) {
 });
 
 class PreferencesRepository {
-  PreferencesRepository(this._box);
+  PreferencesRepository(Box<String> box) : this._(box.get, box.put);
 
-  final Box<String> _box;
+  PreferencesRepository._(this._read, this._write);
+
+  /// Repositório em memória, para testes que não precisam do Hive.
+  PreferencesRepository.memory() : _stored = null {
+    _read = (_) => _stored;
+    _write = (_, value) async {
+      _stored = value;
+    };
+  }
+
+  late final String? Function(dynamic key) _read;
+  late final Future<void> Function(dynamic key, String value) _write;
+  String? _stored;
   static const _key = 'user_prefs';
 
   UserPreferences get() {
-    final raw = _box.get(_key);
+    final raw = _read(_key);
     final prefs = raw == null
         ? const UserPreferences(userName: 'Wellysson')
         : UserPreferences.fromJson(jsonDecode(raw) as Map<String, dynamic>);
     ExerciseCatalog.setCustom(prefs.customExercises);
+    CustomPlanCatalog.set(prefs.customPlans);
     return prefs;
   }
 
   Future<void> save(UserPreferences prefs) async {
     ExerciseCatalog.setCustom(prefs.customExercises);
-    await _box.put(_key, jsonEncode(prefs.toJson()));
+    CustomPlanCatalog.set(prefs.customPlans);
+    await _write(_key, jsonEncode(prefs.toJson()));
   }
 }

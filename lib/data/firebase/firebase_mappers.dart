@@ -11,6 +11,9 @@ abstract final class FirebaseMappers {
     'sexta': 'plan_friday',
     'sabado': 'plan_saturday',
     'domingo': 'plan_sunday',
+    'fb_segunda': 'fb_monday',
+    'fb_quarta': 'fb_wednesday',
+    'fb_sexta': 'fb_friday',
   };
 
   static const planIdToDayId = <String, String>{
@@ -21,6 +24,9 @@ abstract final class FirebaseMappers {
     'plan_friday': 'sexta',
     'plan_saturday': 'sabado',
     'plan_sunday': 'domingo',
+    'fb_monday': 'fb_segunda',
+    'fb_wednesday': 'fb_quarta',
+    'fb_friday': 'fb_sexta',
   };
 
   static const legacyExerciseToId = <String, String>{

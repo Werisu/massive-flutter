@@ -43,6 +43,11 @@ void main() {
     expect(encoded.spotifyLinked, isFalse);
   });
 
+  test('opt-in de pular faixa sobrevive ao JSON', () {
+    const prefs = UserPreferences(spotifySkipOnSet: true);
+    expect(UserPreferences.fromJson(prefs.toJson()).spotifySkipOnSet, isTrue);
+  });
+
   test('vínculo do Spotify sobrevive ao JSON local', () {
     final at = DateTime.utc(2026, 9, 9, 12);
     final prefs = UserPreferences(
@@ -57,14 +62,15 @@ void main() {
     expect(encoded.spotifyAccessTokenAt, at);
   });
 
-  test('JSON antigo assume autoplay e skip ligados', () {
+  test('JSON antigo assume autoplay ligado e skip de faixa desligado', () {
     final prefs = UserPreferences.fromJson({
       'userName': 'Wellysson',
       'restMinutesWorking': 3,
       'restMinutesPrep': 1,
+      'spotifySkipOnSet': true,
     });
     expect(prefs.spotifyAutoplay, isTrue);
-    expect(prefs.spotifySkipOnSet, isTrue);
+    expect(prefs.spotifySkipOnSet, isFalse);
     expect(prefs.spotifyPlaylistUri, '');
     expect(prefs.spotifyLinked, isFalse);
     expect(prefs.spotifyAccessToken, '');

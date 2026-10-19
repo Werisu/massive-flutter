@@ -8,29 +8,39 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/common_widgets.dart';
 import '../../data/models/enums.dart';
 import '../../data/models/workout_plan.dart';
+import '../../data/services/custom_workout_week.dart';
+import 'training_split_selector.dart';
 
 class WorkoutsScreen extends ConsumerWidget {
   const WorkoutsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final prefs = ref.watch(preferencesProvider);
     final plans = ref.watch(allPlansProvider);
     final today = Weekday.fromDateTime(DateTime.now());
+    final customPending =
+        prefs.trainingSplit == TrainingSplit.custom &&
+        !CustomWorkoutWeek.hasTrainingDay(prefs.customPlans);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Treinos')),
-      body: ListView.separated(
+      body: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
-        itemCount: plans.length,
-        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
-        itemBuilder: (context, index) {
-          final plan = plans[index];
-          return WorkoutCard(
-            plan: plan,
-            isToday: plan.weekday == today,
-            onTap: () => context.push('/workout/${plan.id}'),
-          );
-        },
+        children: [
+          const TrainingSplitSelector(),
+          if (!customPending) ...[
+            const SizedBox(height: AppSpacing.lg),
+            for (var i = 0; i < plans.length; i++) ...[
+              if (i > 0) const SizedBox(height: AppSpacing.md),
+              WorkoutCard(
+                plan: plans[i],
+                isToday: plans[i].weekday == today,
+                onTap: () => context.push('/workout/${plans[i].id}'),
+              ),
+            ],
+          ],
+        ],
       ),
     );
   }
@@ -83,9 +93,9 @@ class WorkoutCard extends StatelessWidget {
                 Text(
                   plan.weekday.labelUpper,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        letterSpacing: 1,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    letterSpacing: 1,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -112,10 +122,7 @@ class WorkoutCard extends StatelessWidget {
               ),
               child: const Text(
                 'HOJE',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
               ),
             )
           else

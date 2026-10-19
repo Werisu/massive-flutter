@@ -34,9 +34,15 @@ abstract final class GuideContent {
           '• Sexta — Tríceps e Costas\n'
           '• Sábado — Bíceps, Ombro e Peito\n'
           '• Domingo — Abdômen e Panturrilha\n\n'
-          'A quinta-feira é descanso programado. '
-          'Não invente treinos extras fora dessa estrutura: o músculo '
-          'cresce na recuperação.',
+          'A quinta-feira é descanso programado no protocolo.\n\n'
+          'O app também oferece full body, em Treinos ou no perfil. '
+          'Essa divisão repete o mesmo treino na segunda, quarta e sexta: '
+          'agachamento, stiff, supino reto, remada, puxada, desenvolvimento, '
+          'rosca no banco inclinado e tríceps no cabo. '
+          'Os outros dias ficam de recuperação.\n\n'
+          'Em Treinos, a opção Meus treinos abre uma lista própria. '
+          'Cada dia da semana recebe um nome, os exercícios e as séries, '
+          'ou fica de folga. Quem está começando monta a semana inteira por ali.',
     ),
     GuideTopic(
       id: 'set_types',
