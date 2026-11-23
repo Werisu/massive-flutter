@@ -40,6 +40,13 @@ abstract final class GuideContent {
           'agachamento, stiff, supino reto, remada, puxada, desenvolvimento, '
           'rosca no banco inclinado e tríceps no cabo. '
           'Os outros dias ficam de recuperação.\n\n'
+          'A modalidade 3/7 usa a mesma ideia de bloco em quatro dias: '
+          'segunda (peito e costas), terça (pernas), quinta (ombros e costas) '
+          'e sexta (braços). Cada exercício são cinco mini-séries seguidas — '
+          '3, 4, 5, 6 e 7 reps, 25 no total — na mesma carga, com 15 segundos '
+          'entre elas. A carga fica perto de 70%, um peso de umas 12 reps. '
+          'Depois do 7, o descanso até o próximo exercício é de 3 minutos. '
+          'Quarta, sábado e domingo ficam de recuperação.\n\n'
           'Em Treinos, a opção Meus treinos abre uma lista própria. '
           'Cada dia da semana recebe um nome, os exercícios e as séries, '
           'ou fica de folga. Quem está começando monta a semana inteira por ali.',

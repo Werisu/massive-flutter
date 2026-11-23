@@ -2,9 +2,11 @@ import '../models/enums.dart';
 import '../models/exercise.dart';
 import '../models/workout_plan.dart';
 import '../services/custom_workout_week.dart';
+import 'differentiated_data.dart';
 import 'exercise_media.dart';
 import 'exercise_substitutions.dart';
 import 'full_body_data.dart';
+import 'three_seven_data.dart';
 
 /// Protocol data from "Massive Arms and Shoulders" as documented in instruction.md.
 /// Do not invent exercises or alter set/rep structure.
@@ -25,10 +27,15 @@ abstract final class ProtocolData {
   }
 
   /// Exercícios do protocolo + variações disponíveis para substituição.
-  static List<Exercise> get catalog => [
+  static final List<Exercise> catalog = [
     ...exercises,
+    ...DifferentiatedData.exercises,
     ...ExerciseSubstitutions.alternatives,
   ].map(_withMedia).toList(growable: false);
+
+  static final Map<String, Exercise> _exerciseById = {
+    for (final exercise in catalog.reversed) exercise.id: exercise,
+  };
   static List<SetPrescription> _expand({
     int warmupSets = 0,
     int warmupReps = 10,
@@ -258,15 +265,7 @@ abstract final class ProtocolData {
     ),
   ];
 
-  static Exercise? exerciseById(String id) {
-    for (final e in exercises) {
-      if (e.id == id) return _withMedia(e);
-    }
-    for (final e in ExerciseSubstitutions.alternatives) {
-      if (e.id == id) return _withMedia(e);
-    }
-    return null;
-  }
+  static Exercise? exerciseById(String id) => _exerciseById[id];
 
   static WorkoutExercise? slotById(String workoutExerciseId) {
     for (final plan in plans) {
@@ -314,6 +313,10 @@ abstract final class ProtocolData {
         return plans;
       case TrainingSplit.fullBody:
         return FullBodyData.plans;
+      case TrainingSplit.differentiated:
+        return DifferentiatedData.plans;
+      case TrainingSplit.threeSeven:
+        return ThreeSevenData.plans;
       case TrainingSplit.custom:
         final custom = CustomPlanCatalog.plans;
         return custom.isEmpty ? CustomWorkoutWeek.blank() : custom;
@@ -349,7 +352,19 @@ abstract final class ProtocolData {
     void add(String label, SetType type) {
       final sets = we.sets.where((s) => s.type == type).toList();
       if (sets.isEmpty) return;
-      parts.add('$label ${sets.length}x${sets.first.repsLabel}');
+      final first = sets.first;
+      final sameReps = sets.every(
+        (set) => set.repMin == first.repMin && set.repMax == first.repMax,
+      );
+      final note = first.note;
+      final cue = note == null || note.isEmpty ? '' : ' ($note)';
+      if (!sameReps) {
+        final sequence = sets.map((set) => set.repsLabel).join('+');
+        parts.add('$label $sequence$cue');
+        return;
+      }
+      final unit = first.repsUnit == 'reps' ? '' : ' ${first.repsUnit}';
+      parts.add('$label ${sets.length}x${first.repsLabel}$unit$cue');
     }
 
     add('Aquecimento', SetType.warmup);
@@ -627,14 +642,18 @@ abstract final class ProtocolData {
     return plans.firstWhere((p) => p.weekday == day);
   }
 
+  static final Map<String, WorkoutPlan> _planById = {
+    for (final plan in [
+      ...DifferentiatedData.plans,
+      ...FullBodyData.plans,
+      ...ThreeSevenData.plans,
+      ...plans,
+    ])
+      plan.id: plan,
+  };
+
   static WorkoutPlan? planById(String id) {
-    for (final p in plans) {
-      if (p.id == id) return p;
-    }
-    for (final p in FullBodyData.plans) {
-      if (p.id == id) return p;
-    }
-    return CustomPlanCatalog.byId(id);
+    return _planById[id] ?? CustomPlanCatalog.byId(id);
   }
 
   /// Workout plans that include a given exercise.
