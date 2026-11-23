@@ -9,8 +9,11 @@ import '../../core/widgets/common_widgets.dart';
 import '../../core/widgets/input_widgets.dart';
 import '../../data/models/enums.dart';
 import '../../data/models/workout_plan.dart';
+import '../../data/seed/differentiated_data.dart';
 import '../../data/seed/full_body_data.dart';
 import '../../data/seed/protocol_data.dart';
+import '../../data/seed/three_seven_data.dart';
+import 'differentiated_workout_view.dart';
 import '../../data/services/custom_workout_week.dart';
 import '../../data/services/exercise_catalog.dart';
 import '../workout_session/exercise_substitute_sheet.dart';
@@ -32,6 +35,9 @@ class WorkoutDetailScreen extends ConsumerWidget {
     }
 
     final fullBody = FullBodyData.isPlan(plan.id);
+    final differentiated = DifferentiatedData.isPlan(plan.id);
+    final threeSeven = ThreeSevenData.isPlan(plan.id);
+    final recovery = DifferentiatedData.recoveryFor(plan.id);
     final custom = CustomWorkoutWeek.isId(plan.id);
 
     return Scaffold(
@@ -46,22 +52,32 @@ class WorkoutDetailScreen extends ConsumerWidget {
             ),
         ],
       ),
-      body: plan.isDayOff
+      body: recovery != null
+          ? DifferentiatedRecoveryView(plan: plan)
+          : plan.isDayOff
           ? EmptyState(
               title: 'DAY OFF',
               subtitle: custom
                   ? 'Folga na sua lista. Edite a semana se quiser treinar neste dia.'
                   : fullBody
                   ? 'Dia de recuperação do full body. O treino volta na próxima segunda, quarta ou sexta.'
+                  : differentiated
+                  ? 'Sábado e domingo ficam livres. A semana diferenciada volta na segunda.'
+                  : threeSeven
+                  ? 'Dia de recuperação do 3/7. O bloco volta na próxima segunda, terça, quinta ou sexta.'
                   : 'Dia de recuperação conforme o protocolo. Sono, comida e descanso fazem o músculo crescer.',
               icon: Icons.hotel_outlined,
             )
+          : differentiated
+          ? DifferentiatedWorkoutView(plan: plan)
           : ListView(
               padding: const EdgeInsets.all(AppSpacing.lg),
               children: [
                 Text(
                   custom
                       ? '${plan.exerciseCount} exercícios da sua lista. Use a troca se o equipamento não estiver disponível.'
+                      : threeSeven
+                      ? '${plan.exerciseCount} exercícios. Cada um é um bloco 3/7: mini-séries de 3, 4, 5, 6 e 7 reps na mesma carga, com 15 segundos entre elas. Depois do 7, descanse 3 min.'
                       : fullBody
                       ? '${plan.exerciseCount} exercícios · 3 séries valendo. Compostos em 6–10 reps, bíceps e tríceps em 8–12. Use a troca se o equipamento não estiver disponível.'
                       : '${plan.exerciseCount} exercícios · séries do protocolo. Use a troca se o equipamento não estiver disponível.',
@@ -171,6 +187,13 @@ class WorkoutDetailScreen extends ConsumerWidget {
                             MuscleGroupChip(group: exercise.muscleGroup),
                           ],
                           const SizedBox(height: AppSpacing.md),
+                          if (we.focus != null) ...[
+                            Text(
+                              we.focus!,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                          ],
                           Wrap(
                             spacing: AppSpacing.sm,
                             runSpacing: AppSpacing.sm,
@@ -201,6 +224,14 @@ class WorkoutDetailScreen extends ConsumerWidget {
                                 ),
                             ],
                           ),
+                          if (we.restLabel != null) ...[
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              'Pausa entre as mini-séries: ${we.restLabel}',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: AppColors.textSecondary),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -228,7 +259,21 @@ class WorkoutDetailScreen extends ConsumerWidget {
 String _setGroupLabel(List<SetPrescription> sets, SetType type) {
   final matched = sets.where((s) => s.type == type).toList();
   if (matched.isEmpty) return '';
-  return '${matched.length}x${matched.first.repsLabel}';
+  final first = matched.first;
+  final sameReps = matched.every(
+    (set) => set.repMin == first.repMin && set.repMax == first.repMax,
+  );
+  if (!sameReps) {
+    final sequence = matched.map((set) => set.repsLabel).join('+');
+    final note = first.note;
+    if (note != null &&
+        note.isNotEmpty &&
+        matched.every((set) => set.note == note)) {
+      return '$sequence · $note';
+    }
+    return sequence;
+  }
+  return '${matched.length}x${first.repsLabel}';
 }
 
 class _SetSummary extends StatelessWidget {

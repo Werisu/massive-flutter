@@ -11,6 +11,7 @@ import '../../core/widgets/common_widgets.dart';
 import '../../core/widgets/sync_status_card.dart';
 import '../../data/models/enums.dart';
 import '../../data/repositories/session_repository.dart';
+import '../../data/seed/differentiated_data.dart';
 import '../../data/services/custom_workout_week.dart';
 import '../../data/services/history_grouping.dart';
 import '../../data/services/workout_streak.dart';
@@ -41,27 +42,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     ref.watch(sessionsProvider);
     final repo = ref.watch(sessionRepositoryProvider);
     final finished = repo.getFinishedSessions();
-    final last = repo.getLastFinishedSession();
-    final yesterdayDays = HistoryGrouping.daysOn(
-      finished,
-      DateTime.now().subtract(const Duration(days: 1)),
-    );
-    final lastDay = last == null
-        ? null
-        : HistoryGrouping.findById(
-            finished,
-            HistoryGrouping.dayKey(last.startedAt, last.workoutPlanId),
-          );
-    final lastIsYesterday =
-        lastDay != null && yesterdayDays.any((day) => day.id == lastDay.id);
+    final last = finished.isEmpty ? null : finished.first;
+    final grouped = HistoryGrouping.groupFinishedSessions(finished);
+    final yesterday = DateTime.now().subtract(const Duration(days: 1));
+    final yesterdayDays = [
+      for (final day in grouped)
+        if (isSameCalendarDay(day.date, yesterday)) day,
+    ];
+    WorkoutDaySummary? lastDay;
+    if (last != null) {
+      final key = HistoryGrouping.dayKey(last.startedAt, last.workoutPlanId);
+      for (final day in grouped) {
+        if (day.id == key) {
+          lastDay = day;
+          break;
+        }
+      }
+    }
+    final shownLast = lastDay;
+    var lastIsYesterday = false;
+    if (shownLast != null) {
+      for (final day in yesterdayDays) {
+        if (day.id == shownLast.id) {
+          lastIsYesterday = true;
+          break;
+        }
+      }
+    }
     final active = repo.getActiveSession();
     final greeting = greetingForNow();
     final plans = ref.watch(allPlansProvider);
     final customPending =
         prefs.trainingSplit == TrainingSplit.custom &&
         !CustomWorkoutWeek.hasTrainingDay(prefs.customPlans);
+    final recovery = DifferentiatedData.recoveryFor(today.id);
     final streak = WorkoutStreak.current(
-      repo.getFinishedSessions(),
+      finished,
       dayOffWeekdays: plans
           .where((plan) => plan.isDayOff)
           .map((plan) => plan.weekday)
@@ -98,7 +114,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             TrainingSplitSelector(allowEdit: customPending),
             const SizedBox(height: AppSpacing.md),
             AppCard(
-              highlighted: customPending || !today.isDayOff,
+              highlighted: customPending || !today.isDayOff || recovery != null,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -114,6 +130,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   Text(
                     customPending
                         ? 'SUA LISTA'
+                        : recovery != null
+                        ? today.name.toUpperCase()
                         : (today.isDayOff
                               ? 'DAY OFF'
                               : today.name.toUpperCase()),
@@ -165,11 +183,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       label: 'Ver detalhes',
                       onPressed: () => context.push('/workout/${today.id}'),
                     ),
+                  ] else if (recovery != null) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    for (final block in recovery.blocks) ...[
+                      Text(
+                        '${block.title} · ${block.dose}',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                    ],
+                    const SizedBox(height: AppSpacing.md),
+                    SecondaryButton(
+                      label: 'Ver rotina',
+                      onPressed: () => context.push('/workout/${today.id}'),
+                    ),
                   ] else ...[
                     const SizedBox(height: AppSpacing.md),
                     Text(
                       prefs.trainingSplit == TrainingSplit.custom
                           ? 'Folga na sua lista. O treino volta no próximo dia que você marcou.'
+                          : prefs.trainingSplit == TrainingSplit.differentiated
+                          ? 'Sábado e domingo ficam livres. A semana diferenciada volta na segunda.'
+                          : prefs.trainingSplit == TrainingSplit.threeSeven
+                          ? 'Quarta, sábado e domingo são recuperação. O 3/7 volta no próximo dia marcado.'
                           : FunCopy.dayOffNote(),
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),

@@ -14,6 +14,20 @@ abstract final class FirebaseMappers {
     'fb_segunda': 'fb_monday',
     'fb_quarta': 'fb_wednesday',
     'fb_sexta': 'fb_friday',
+    'sp_segunda': 'sp_monday',
+    'sp_terca': 'sp_tuesday',
+    'sp_quarta': 'sp_wednesday',
+    'sp_quinta': 'sp_thursday',
+    'sp_sexta': 'sp_friday',
+    'sp_sabado': 'sp_saturday',
+    'sp_domingo': 'sp_sunday',
+    'm37_segunda': 'm37_monday',
+    'm37_terca': 'm37_tuesday',
+    'm37_quarta': 'm37_wednesday',
+    'm37_quinta': 'm37_thursday',
+    'm37_sexta': 'm37_friday',
+    'm37_sabado': 'm37_saturday',
+    'm37_domingo': 'm37_sunday',
   };
 
   static const planIdToDayId = <String, String>{
@@ -27,6 +41,20 @@ abstract final class FirebaseMappers {
     'fb_monday': 'fb_segunda',
     'fb_wednesday': 'fb_quarta',
     'fb_friday': 'fb_sexta',
+    'sp_monday': 'sp_segunda',
+    'sp_tuesday': 'sp_terca',
+    'sp_wednesday': 'sp_quarta',
+    'sp_thursday': 'sp_quinta',
+    'sp_friday': 'sp_sexta',
+    'sp_saturday': 'sp_sabado',
+    'sp_sunday': 'sp_domingo',
+    'm37_monday': 'm37_segunda',
+    'm37_tuesday': 'm37_terca',
+    'm37_wednesday': 'm37_quarta',
+    'm37_thursday': 'm37_quinta',
+    'm37_friday': 'm37_sexta',
+    'm37_saturday': 'm37_sabado',
+    'm37_sunday': 'm37_domingo',
   };
 
   static const legacyExerciseToId = <String, String>{

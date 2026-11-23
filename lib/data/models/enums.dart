@@ -2,6 +2,8 @@
 enum TrainingSplit {
   protocol,
   fullBody,
+  differentiated,
+  threeSeven,
   custom;
 
   String get labelPt {
@@ -10,6 +12,10 @@ enum TrainingSplit {
         return 'Protocolo';
       case TrainingSplit.fullBody:
         return 'Full body';
+      case TrainingSplit.differentiated:
+        return 'Diferenciado';
+      case TrainingSplit.threeSeven:
+        return '3/7';
       case TrainingSplit.custom:
         return 'Meus treinos';
     }

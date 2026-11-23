@@ -20,6 +20,7 @@ import '../../data/models/workout_plan.dart';
 import '../../data/models/workout_session.dart';
 import '../../data/repositories/session_repository.dart';
 import '../../data/seed/protocol_data.dart';
+import '../../data/seed/three_seven_data.dart';
 import '../../data/services/exercise_catalog.dart';
 import '../../data/services/history_grouping.dart';
 import '../../data/services/workout_share_snapshot.dart';
@@ -132,6 +133,24 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     return null;
   }
 
+  /// Cartão do exercício seguinte, para montar a estação enquanto este acaba.
+  Widget? _nextExerciseCard() {
+    final session = _session;
+    final plan = _plan;
+    if (session == null || plan == null) return null;
+    final nextIndex = _exerciseIndex + 1;
+    if (nextIndex >= session.exercises.length) return null;
+    final next = session.exercises[nextIndex];
+    WorkoutExercise? slot;
+    for (final candidate in plan.exercises) {
+      if (candidate.id == next.workoutExerciseId) {
+        slot = candidate;
+        break;
+      }
+    }
+    return _NextExerciseCard(exercise: next, slot: slot, number: nextIndex + 1);
+  }
+
   void _prefillCurrentSet() {
     final setIndex = _currentSetIndex;
     if (setIndex == null || _session == null) {
@@ -140,6 +159,11 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     }
 
     final set = _currentExercise.sets[setIndex];
+    final prescription = _prescriptionFor(setIndex);
+    final fixedReps =
+        prescription != null && prescription.repMin == prescription.repMax
+        ? prescription.repMin
+        : null;
     final repo = ref.read(sessionRepositoryProvider);
     final suggestion = repo.suggestPrefill(
       exerciseId: _currentExercise.exerciseId,
@@ -159,6 +183,8 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
 
     if (set.repetitions != null) {
       _repsCtrl.text = '${set.repetitions}';
+    } else if (fixedReps != null) {
+      _repsCtrl.text = '$fixedReps';
     } else if (suggestion?.repetitions != null) {
       final s = suggestion!;
       final shouldPrefillReps =
@@ -177,7 +203,10 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     _rir = set.rir ?? suggestion?.rir;
 
     String? hint;
-    if (suggestion != null &&
+    if (fixedReps != null && suggestion?.weight != null) {
+      final origin = suggestion!.fromHistory ? 'Último treino' : 'Mesma carga';
+      hint = '$origin: ${formatWeight(suggestion.weight)}';
+    } else if (suggestion != null &&
         (suggestion.weight != null || suggestion.repetitions != null)) {
       final origin = suggestion.fromHistory
           ? 'Último treino'
@@ -208,6 +237,8 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     }
 
     final prescription = _prescriptionFor(setIndex);
+    final block = ThreeSevenData.isBlock(_currentSlot.sets);
+    final lastOfBlock = block && setIndex == _currentSlot.sets.length - 1;
     final previous = ref
         .read(sessionRepositoryProvider)
         .getLastWorkingSet(_currentExercise.exerciseId);
@@ -224,13 +255,14 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
         );
 
     final setType = updated.exercises[_exerciseIndex].sets[setIndex].setType;
-    final isPr =
+    final beatLast =
         setType == SetType.working &&
         previous != null &&
         previous.weight != null &&
         weight != null &&
         (weight > previous.weight! ||
             (weight == previous.weight && (previous.repetitions ?? 0) < reps));
+    final isPr = beatLast && (!block || lastOfBlock);
 
     if (isPr) {
       HapticFeedback.heavyImpact();
@@ -238,17 +270,22 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
       HapticFeedback.mediumImpact();
     }
 
-    final msg = progressionMessage(
-      previousReps: previous?.repetitions,
-      currentReps: reps,
-      previousWeight: previous?.weight,
-      currentWeight: weight,
-      targetRepMax: prescription?.repMax ?? 10,
-    );
-    final suggestion = weightSuggestion(
-      reps: reps,
-      targetRepMax: prescription?.repMax ?? 10,
-    );
+    final suggestLoad = !block || lastOfBlock;
+    final msg = suggestLoad
+        ? progressionMessage(
+            previousReps: previous?.repetitions,
+            currentReps: reps,
+            previousWeight: previous?.weight,
+            currentWeight: weight,
+            targetRepMax: prescription?.repMax ?? 10,
+          )
+        : '';
+    final suggestion = suggestLoad
+        ? weightSuggestion(
+            reps: reps,
+            targetRepMax: prescription?.repMax ?? 10,
+          )
+        : '';
 
     if (mounted) {
       final cheer = isPr
@@ -265,7 +302,13 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
     }
 
     final prefs = ref.read(preferencesProvider);
-    final rest = setType == SetType.working
+    final slotRest = _currentSlot.restSeconds;
+    final prescribedRest = prescription?.restSeconds;
+    final rest = prescribedRest != null
+        ? Duration(seconds: prescribedRest)
+        : setType == SetType.working && slotRest != null
+        ? Duration(seconds: slotRest)
+        : setType == SetType.working
         ? Duration(minutes: prefs.restMinutesWorking)
         : Duration(minutes: prefs.restMinutesPrep);
 
@@ -276,7 +319,7 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
       _restGeneration++;
     });
 
-    if (setType == SetType.working) {
+    if (setType == SetType.working && (!block || lastOfBlock)) {
       ref.read(spotifyPumpProvider.notifier).onHardEffort();
     }
   }
@@ -605,11 +648,16 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
 
     ref.watch(preferencesProvider);
     final exercise = ExerciseCatalog.byId(_currentExercise.exerciseId);
+    final slotLabel = _currentSlot.focus;
     final setIndex = _currentSetIndex;
     final last = ref
         .watch(sessionRepositoryProvider)
         .getLastWorkingSet(_currentExercise.exerciseId);
     final prescription = setIndex == null ? null : _prescriptionFor(setIndex);
+    final finishingExercise =
+        setIndex != null && setIndex == _currentExercise.sets.length - 1;
+    final block = ThreeSevenData.isBlock(_currentSlot.sets);
+    final nextCard = _nextExerciseCard();
 
     return Scaffold(
       appBar: AppBar(
@@ -695,6 +743,15 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                     exercise?.name ?? _currentExercise.exerciseId,
                     style: Theme.of(context).textTheme.headlineLarge,
                   ),
+                  if (!_currentExercise.isSubstituted && slotLabel != null) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      slotLabel,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                   if (_currentExercise.isSubstituted) ...[
                     const SizedBox(height: AppSpacing.xs),
                     Text(
@@ -789,17 +846,36 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                       onFinished: _afterRest,
                       onSkip: _afterRest,
                     ),
+                    if (_currentExercise.isCompleted && nextCard != null) ...[
+                      const SizedBox(height: AppSpacing.lg),
+                      nextCard,
+                    ],
                   ] else if (setIndex != null && prescription != null) ...[
                     const SizedBox(height: AppSpacing.lg),
                     Text(
-                      'Registrar série ${setIndex + 1}',
+                      block
+                          ? 'Mini-série ${setIndex + 1} de ${ThreeSevenData.miniReps.length}'
+                          : 'Registrar série ${setIndex + 1}',
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
-                      '${prescription.type.labelPt} · ${prescription.repsLabel} reps',
+                      '${prescription.type.labelPt} · ${prescription.doseLabel}',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
+                    if (block) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        finishingExercise
+                            ? 'Última mini-série. Depois, 3 min até o próximo exercício.'
+                            : 'Mesma carga do bloco. Ao concluir, pause 15 seg.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                    if (finishingExercise && nextCard != null) ...[
+                      const SizedBox(height: AppSpacing.lg),
+                      nextCard,
+                    ],
                     if (_prefillHint != null) ...[
                       const SizedBox(height: AppSpacing.sm),
                       Container(
@@ -841,7 +917,14 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                       children: [
                         Expanded(child: WeightInput(controller: _weightCtrl)),
                         const SizedBox(width: AppSpacing.md),
-                        Expanded(child: RepsInput(controller: _repsCtrl)),
+                        Expanded(
+                          child: RepsInput(
+                            controller: _repsCtrl,
+                            label: prescription.repsUnit == 'seg'
+                                ? 'Segundos'
+                                : 'Reps',
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
@@ -874,6 +957,10 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
                             style: Theme.of(context).textTheme.headlineSmall,
                             textAlign: TextAlign.center,
                           ),
+                          if (nextCard != null) ...[
+                            const SizedBox(height: AppSpacing.lg),
+                            nextCard,
+                          ],
                           const SizedBox(height: AppSpacing.lg),
                           if (_exerciseIndex < _session!.exercises.length - 1)
                             PrimaryButton(
@@ -906,6 +993,65 @@ class _WorkoutSessionScreenState extends ConsumerState<WorkoutSessionScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _NextExerciseCard extends StatelessWidget {
+  const _NextExerciseCard({
+    required this.exercise,
+    required this.slot,
+    required this.number,
+  });
+
+  final SessionExercise exercise;
+  final WorkoutExercise? slot;
+  final int number;
+
+  @override
+  Widget build(BuildContext context) {
+    final catalog = ExerciseCatalog.byId(exercise.exerciseId);
+    final name = catalog?.name ?? exercise.exerciseId;
+    final focus = exercise.isSubstituted ? null : slot?.focus;
+    final working =
+        slot?.sets.where((set) => set.type == SetType.working).toList() ??
+        const <SetPrescription>[];
+    final dose = working.isEmpty ? null : prescriptionGroupLabel(working);
+    final theme = Theme.of(context);
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'PRÓXIMO · $number',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: AppColors.primaryLight,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.1,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(name, style: theme.textTheme.titleLarge),
+          if (focus != null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            Text(focus, style: theme.textTheme.bodyMedium),
+          ],
+          if (catalog != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            MuscleGroupChip(group: catalog.muscleGroup),
+          ],
+          if (dose != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              'Valendo $dose',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -953,9 +1099,11 @@ class _SetCard extends StatelessWidget {
                   children: [
                     SetTypeBadge(type: set.setType),
                     const SizedBox(width: AppSpacing.sm),
-                    Text(
-                      '${prescription.repsLabel} reps',
-                      style: Theme.of(context).textTheme.bodySmall,
+                    Expanded(
+                      child: Text(
+                        prescription.doseLabel,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                     ),
                   ],
                 ),
@@ -963,6 +1111,7 @@ class _SetCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     '${formatWeight(set.weight)} × ${set.repetitions ?? '—'}'
+                    '${prescription.repsUnit == 'seg' ? ' seg' : ''}'
                     '${set.rir != null ? ' · RIR ${set.rir}' : ''}',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
